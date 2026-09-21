@@ -88,7 +88,7 @@
 
   function renderLobby() {
     const tiles = LOBBY_FIGHTERS.map((f, i) => `
-      <div class="arena-fighter" style="animation-delay:${(i * 0.12).toFixed(2)}s">
+      <div class="arena-fighter" data-action="punch" data-color="${f.color}" style="animation-delay:${(i * 0.12).toFixed(2)}s">
         <div class="arena-fighter-photo-wrap">
           <div class="arena-fighter-glow" style="background:${f.color}; animation-delay:${(i * 0.3).toFixed(2)}s"></div>
           <div class="arena-fighter-frame" style="border-color:${f.color}; animation-delay:${(i * 0.4).toFixed(2)}s">
@@ -108,7 +108,7 @@
           </div>
         </div>
         <h2 class="arena-heading">Kampene starter snart</h2>
-        <p class="arena-sub">Fire ledertyper. To kamper. Gjør deg klar til å tippe.</p>
+        <p class="arena-sub">Trykk på en fighter og kjenn på trøkket 👊</p>
         <div class="arena-grid">${tiles}</div>
       </section>
     `;
@@ -289,6 +289,10 @@
         btn.disabled = false;
       }
     }
+
+    if (btn.dataset.action === 'punch') {
+      triggerPunch(btn, btn.dataset.color);
+    }
   });
 
   document.getElementById('app').addEventListener('keydown', (e) => {
@@ -299,6 +303,63 @@
   });
 
   const confetti = createConfetti(document.getElementById('confetti-canvas'));
+
+  // --- Tap a fighter in the lobby to throw a punch ---
+  const PUNCH_WORDS = ['POW!', 'BOOM!', 'BAM!', 'KO!', 'WHAM!', '🔥', '💥'];
+
+  function triggerPunch(tile, color) {
+    const wrap = tile.querySelector('.arena-fighter-photo-wrap');
+    const frame = tile.querySelector('.arena-fighter-frame');
+    const rect = wrap.getBoundingClientRect();
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top + rect.height / 2;
+
+    const ring = document.createElement('span');
+    ring.className = 'punch-ring';
+    ring.style.left = `${cx}px`;
+    ring.style.top = `${cy}px`;
+    ring.style.borderColor = color;
+    document.body.appendChild(ring);
+    ring.addEventListener('animationend', () => ring.remove());
+
+    const word = document.createElement('span');
+    word.className = 'punch-word';
+    word.textContent = PUNCH_WORDS[Math.floor(Math.random() * PUNCH_WORDS.length)];
+    word.style.left = `${cx}px`;
+    word.style.top = `${cy - 40}px`;
+    word.style.color = color;
+    document.body.appendChild(word);
+    word.addEventListener('animationend', () => word.remove());
+
+    if (frame && frame.animate) {
+      frame.animate([
+        { transform: 'translateX(0) rotate(0deg)' },
+        { transform: 'translateX(-7px) rotate(-3deg)' },
+        { transform: 'translateX(6px) rotate(3deg)' },
+        { transform: 'translateX(-4px) rotate(-1.5deg)' },
+        { transform: 'translateX(2px) rotate(1deg)' },
+        { transform: 'translateX(0) rotate(0deg)' },
+      ], { duration: 380, easing: 'ease-in-out' });
+    }
+
+    confetti.burst(cx, cy, color, 16);
+  }
+
+  // --- Occasional floating reaction emojis for extra lobby chaos ---
+  const REACTION_EMOJIS = ['🔥', '👊', '💥', '⚡', '😤', '🥊'];
+  function spawnReaction() {
+    if (document.querySelector('.arena-lobby')) {
+      const el = document.createElement('span');
+      el.className = 'reaction-emoji';
+      el.textContent = REACTION_EMOJIS[Math.floor(Math.random() * REACTION_EMOJIS.length)];
+      el.style.left = `${8 + Math.random() * 84}vw`;
+      el.style.bottom = '0px';
+      document.body.appendChild(el);
+      el.addEventListener('animationend', () => el.remove());
+    }
+    setTimeout(spawnReaction, 2600 + Math.random() * 2200);
+  }
+  setTimeout(spawnReaction, 3000);
 
   // --- Announcement overlay (full-screen popup on your phone when a result drops) ---
   const overlay = document.getElementById('announcement-overlay');

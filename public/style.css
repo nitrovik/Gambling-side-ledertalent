@@ -41,13 +41,21 @@ body {
 }
 .glow-a {
   width: 380px; height: 380px;
-  background: var(--accent);
   top: -120px; left: -100px;
+  animation: color-cycle 22s ease-in-out infinite;
 }
 .glow-b {
   width: 420px; height: 420px;
-  background: var(--petra);
   bottom: -140px; right: -120px;
+  animation: color-cycle 22s ease-in-out infinite reverse;
+  animation-delay: -11s;
+}
+@keyframes color-cycle {
+  0% { background: var(--rita); }
+  25% { background: var(--morten); }
+  50% { background: var(--petra); }
+  75% { background: var(--pal); }
+  100% { background: var(--rita); }
 }
 
 .embers {
@@ -75,6 +83,53 @@ body {
   10% { opacity: 0.8; }
   90% { opacity: 0.35; }
   100% { transform: translate(20px, -100vh); opacity: 0; }
+}
+
+.reaction-emoji {
+  position: fixed;
+  z-index: 2;
+  pointer-events: none;
+  font-size: 28px;
+  animation: reaction-float 3.4s ease-out forwards;
+}
+@keyframes reaction-float {
+  0% { transform: translate(-50%, 0) scale(0.4) rotate(0deg); opacity: 0; }
+  15% { transform: translate(-50%, -20px) scale(1.1) rotate(-8deg); opacity: 1; }
+  100% { transform: translate(-50%, -260px) scale(1) rotate(10deg); opacity: 0; }
+}
+
+.punch-ring {
+  position: fixed;
+  width: 24px;
+  height: 24px;
+  margin-left: -12px;
+  margin-top: -12px;
+  border-radius: 50%;
+  border: 3px solid;
+  z-index: 55;
+  pointer-events: none;
+  animation: punch-ring-expand 0.55s ease-out forwards;
+}
+@keyframes punch-ring-expand {
+  0% { transform: scale(0.4); opacity: 0.9; }
+  100% { transform: scale(5); opacity: 0; }
+}
+
+.punch-word {
+  position: fixed;
+  transform: translate(-50%, -50%);
+  font-family: 'Anton', sans-serif;
+  font-size: 24px;
+  letter-spacing: 0.02em;
+  z-index: 56;
+  pointer-events: none;
+  text-shadow: 0 2px 14px rgba(0, 0, 0, 0.7);
+  animation: punch-word-float 0.9s ease-out forwards;
+}
+@keyframes punch-word-float {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(0.5); }
+  20% { opacity: 1; transform: translate(-50%, -50%) scale(1.2); }
+  100% { opacity: 0; transform: translate(-50%, -85%) scale(1); }
 }
 
 .hero {
@@ -240,6 +295,7 @@ main#app {
 
 .arena-fighter {
   position: relative;
+  cursor: pointer;
   animation: fighter-enter 0.65s cubic-bezier(0.34, 1.56, 0.64, 1) backwards;
   transition: transform 0.15s ease;
 }
@@ -288,11 +344,11 @@ main#app {
 }
 
 @keyframes fighter-idle {
-  0%, 100% { transform: translateY(0) rotate(0deg); }
+  0%, 100% { transform: translateY(0) rotate(0deg); filter: brightness(1); }
   22% { transform: translateY(-6px) rotate(-1.5deg); }
   42% { transform: translateY(0) rotate(0deg); }
-  56% { transform: translate(5px, -2px) rotate(2.5deg); }
-  64% { transform: translate(-2px, 0) rotate(-1deg); }
+  55% { transform: translate(5px, -2px) rotate(2.5deg); filter: brightness(1.5); }
+  64% { transform: translate(-2px, 0) rotate(-1deg); filter: brightness(1); }
   72% { transform: translateY(0) rotate(0deg); }
   86% { transform: translateY(-3px) rotate(1deg); }
 }

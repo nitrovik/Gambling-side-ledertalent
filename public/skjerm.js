@@ -168,6 +168,23 @@
 
   const confetti = createConfetti(document.getElementById('confetti-canvas'));
 
+  // --- Occasional floating reaction emojis while the lobby is up ---
+  const REACTION_EMOJIS = ['🔥', '👊', '💥', '⚡', '😤', '🥊'];
+  function spawnReaction() {
+    if (document.querySelector('.skjerm-arena-grid')) {
+      const el = document.createElement('span');
+      el.className = 'reaction-emoji';
+      el.textContent = REACTION_EMOJIS[Math.floor(Math.random() * REACTION_EMOJIS.length)];
+      el.style.left = `${8 + Math.random() * 84}vw`;
+      el.style.bottom = '0px';
+      el.style.fontSize = '44px';
+      document.body.appendChild(el);
+      el.addEventListener('animationend', () => el.remove());
+    }
+    setTimeout(spawnReaction, 2200 + Math.random() * 1800);
+  }
+  setTimeout(spawnReaction, 2500);
+
   function handlePhaseChange(phase) {
     if (lastPhase === null) return;
     if (phase === lastPhase) return;

@@ -129,11 +129,11 @@ body.skjerm-body {
 }
 
 @keyframes skjerm-fighter-idle {
-  0%, 100% { transform: translateY(0) rotate(0deg); }
+  0%, 100% { transform: translateY(0) rotate(0deg); filter: brightness(1); }
   22% { transform: translateY(-10px) rotate(-1.5deg); }
   42% { transform: translateY(0) rotate(0deg); }
-  56% { transform: translate(8px, -4px) rotate(2.5deg); }
-  64% { transform: translate(-3px, 0) rotate(-1deg); }
+  55% { transform: translate(8px, -4px) rotate(2.5deg); filter: brightness(1.5); }
+  64% { transform: translate(-3px, 0) rotate(-1deg); filter: brightness(1); }
   72% { transform: translateY(0) rotate(0deg); }
   86% { transform: translateY(-5px) rotate(1deg); }
 }
