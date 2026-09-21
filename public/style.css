@@ -269,7 +269,7 @@ main#app {
 }
 .arena-fighter-frame img {
   width: 100%;
-  aspect-ratio: 125 / 142;
+  aspect-ratio: 400 / 580;
   object-fit: cover;
   display: block;
 }
@@ -338,7 +338,7 @@ main#app {
 
 .fighter-pick img {
   width: 100%;
-  aspect-ratio: 125 / 142;
+  aspect-ratio: 400 / 580;
   object-fit: cover;
   display: block;
 }
@@ -418,7 +418,7 @@ main#app {
 }
 .result-view img {
   width: 160px;
-  aspect-ratio: 125 / 142;
+  aspect-ratio: 400 / 580;
   object-fit: cover;
   border-radius: 16px;
   margin: 10px auto;
@@ -530,7 +530,7 @@ main#app {
 
 .announcement-card img {
   width: 180px;
-  aspect-ratio: 125 / 142;
+  aspect-ratio: 400 / 580;
   object-fit: cover;
   border-radius: 18px;
   margin: 14px auto;

@@ -15,8 +15,8 @@ body.skjerm-body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 2vh;
-  padding: 2.5vh 4vw;
+  gap: 1.8vh;
+  padding: 2vh 4vw;
   text-align: center;
   box-sizing: border-box;
 }
@@ -77,9 +77,9 @@ body.skjerm-body {
 /* Lobby fighter arena */
 .skjerm-arena-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(140px, 1fr));
+  grid-template-columns: repeat(4, minmax(130px, 1fr));
   gap: clamp(14px, 2vw, 32px);
-  max-width: 1280px;
+  max-width: 1050px;
   width: 100%;
 }
 
@@ -111,7 +111,7 @@ body.skjerm-body {
 }
 .skjerm-arena-frame img {
   width: 100%;
-  aspect-ratio: 125 / 142;
+  aspect-ratio: 400 / 580;
   object-fit: cover;
   display: block;
 }
@@ -201,8 +201,8 @@ body.skjerm-body {
   gap: 1.4vh;
 }
 .skjerm-fighter img {
-  width: clamp(150px, 18vw, 300px);
-  aspect-ratio: 125 / 142;
+  width: clamp(140px, 15vw, 260px);
+  aspect-ratio: 400 / 580;
   object-fit: cover;
   border-radius: 28px;
   border: 4px solid;
@@ -262,8 +262,8 @@ body.skjerm-body {
 
 /* Result reveal */
 .skjerm-result img {
-  width: clamp(220px, 24vw, 400px);
-  aspect-ratio: 125 / 142;
+  width: clamp(200px, 18vw, 300px);
+  aspect-ratio: 400 / 580;
   object-fit: cover;
   border-radius: 30px;
   border: 5px solid var(--accent);
