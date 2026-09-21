@@ -8,16 +8,16 @@ const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'ledertalent';
 const DATA_FILE = path.join(__dirname, 'data', 'state.json');
 
 const FIGHTERS = {
-  rita: { id: 'rita', name: 'Rita Relator', color: '#f6b9e2', image: 'images/rita_card.png', photo: 'images/rita_photo.png',
+  rita: { id: 'rita', name: 'Rita Relator', color: '#f6b9e2', image: 'images/rita_card.png', photo: 'images/rita_photo.jpg',
     type: 'Relasjoner og stemning',
     quote: 'Når det oppstår dårlig stemning eller relasjonen mellom mennesker blir truet' },
-  morten: { id: 'morten', name: 'Morten Motivator', color: '#f6dd90', image: 'images/morten_card.png', photo: 'images/morten_photo.png',
+  morten: { id: 'morten', name: 'Morten Motivator', color: '#f6dd90', image: 'images/morten_card.png', photo: 'images/morten_photo.jpg',
     type: 'Energi og engasjement',
     quote: 'Når energi, engasjement eller muligheten til å bli hørt blir blokkert' },
-  petra: { id: 'petra', name: 'Petra Processor', color: '#9db6ce', image: 'images/petra_card.png', photo: 'images/petra_photo.png',
+  petra: { id: 'petra', name: 'Petra Processor', color: '#9db6ce', image: 'images/petra_card.png', photo: 'images/petra_photo.jpg',
     type: 'Fakta og metode',
     quote: 'Når det er uenighet om fakta, regler, metode eller hva som er riktig' },
-  pal: { id: 'pal', name: 'Pål Producer', color: '#a8c29e', image: 'images/pal_card.png', photo: 'images/pal_photo.png',
+  pal: { id: 'pal', name: 'Pål Producer', color: '#a8c29e', image: 'images/pal_card.png', photo: 'images/pal_photo.jpg',
     type: 'Mål og resultat',
     quote: 'Når noe eller noen står i veien for målet/resultatet' },
 };

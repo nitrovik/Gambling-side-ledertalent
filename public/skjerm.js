@@ -46,10 +46,10 @@
   }
 
   const LOBBY_FIGHTERS = [
-    { name: 'Rita Relator', photo: 'images/rita_photo.png', color: '#f6b9e2' },
-    { name: 'Morten Motivator', photo: 'images/morten_photo.png', color: '#f6dd90' },
-    { name: 'Petra Processor', photo: 'images/petra_photo.png', color: '#9db6ce' },
-    { name: 'Pål Producer', photo: 'images/pal_photo.png', color: '#a8c29e' },
+    { name: 'Rita Relator', photo: 'images/rita_photo.jpg', color: '#f6b9e2' },
+    { name: 'Morten Motivator', photo: 'images/morten_photo.jpg', color: '#f6dd90' },
+    { name: 'Petra Processor', photo: 'images/petra_photo.jpg', color: '#9db6ce' },
+    { name: 'Pål Producer', photo: 'images/pal_photo.jpg', color: '#a8c29e' },
   ];
 
   function renderLobby(state) {
