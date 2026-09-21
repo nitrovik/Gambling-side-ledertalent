@@ -1,0 +1,231 @@
+html, body.skjerm-body {
+  height: 100%;
+}
+body.skjerm-body {
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.skjerm-app {
+  position: relative;
+  z-index: 1;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2.5vh;
+  padding: 3vh 4vw;
+  text-align: center;
+  box-sizing: border-box;
+}
+
+.skjerm-eyebrow {
+  font-size: clamp(16px, 2vw, 26px);
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  font-weight: 700;
+  margin: 0;
+}
+
+.skjerm-title {
+  font-family: 'Anton', sans-serif;
+  font-size: clamp(52px, 9vw, 130px);
+  letter-spacing: 0.03em;
+  margin: 0;
+  line-height: 1;
+  background: linear-gradient(180deg, #fff 0%, #ffd7d7 60%, var(--accent) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.skjerm-tagline {
+  font-size: clamp(16px, 1.6vw, 24px);
+  color: var(--text-dim);
+  margin: 0;
+}
+
+/* Lobby */
+.skjerm-fighter-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(260px, 1fr));
+  gap: 2vw;
+  max-width: 1200px;
+  width: 100%;
+}
+.skjerm-fighter-grid img {
+  width: 100%;
+  display: block;
+  border-radius: 20px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+}
+
+.skjerm-join {
+  font-size: clamp(18px, 2vw, 30px);
+  background: var(--bg-card);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+  padding: 16px 36px;
+  color: var(--text-dim);
+}
+.skjerm-join strong {
+  color: var(--accent);
+  font-family: 'Anton', sans-serif;
+  letter-spacing: 0.03em;
+}
+
+.skjerm-count {
+  font-size: clamp(14px, 1.3vw, 18px);
+  color: var(--text-dim);
+}
+
+/* Versus (match open) */
+.skjerm-live-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(255, 59, 92, 0.14);
+  color: var(--accent);
+  padding: 10px 24px;
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: clamp(14px, 1.4vw, 20px);
+  letter-spacing: 0.08em;
+}
+.skjerm-live-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--accent);
+  animation: skjerm-pulse 1.2s infinite;
+}
+@keyframes skjerm-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.25; }
+}
+
+.skjerm-versus {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(20px, 4vw, 64px);
+}
+
+.skjerm-fighter {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.4vh;
+}
+.skjerm-fighter img {
+  width: clamp(150px, 18vw, 300px);
+  aspect-ratio: 125 / 142;
+  object-fit: cover;
+  border-radius: 28px;
+  border: 4px solid;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.5);
+  display: block;
+}
+.skjerm-fighter-name {
+  font-family: 'Anton', sans-serif;
+  font-size: clamp(22px, 2.8vw, 42px);
+  margin: 0;
+}
+
+.skjerm-vs {
+  font-family: 'Anton', sans-serif;
+  font-size: clamp(26px, 4vw, 56px);
+  color: var(--accent);
+}
+
+/* Tally bars */
+.skjerm-tally {
+  width: min(900px, 90vw);
+  display: flex;
+  flex-direction: column;
+  gap: 1.6vh;
+}
+.skjerm-tally-row {
+  display: grid;
+  grid-template-columns: 110px 1fr 80px;
+  align-items: center;
+  gap: 16px;
+  font-size: clamp(16px, 1.6vw, 26px);
+  font-weight: 700;
+}
+.skjerm-bar-track {
+  height: clamp(14px, 1.8vw, 26px);
+  background: var(--bg-card-2);
+  border-radius: 999px;
+  overflow: hidden;
+}
+.skjerm-bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.5s ease;
+}
+.skjerm-tally-total {
+  font-size: clamp(14px, 1.3vw, 18px);
+  color: var(--text-dim);
+}
+
+/* Result reveal */
+.skjerm-result img {
+  width: clamp(220px, 24vw, 400px);
+  aspect-ratio: 125 / 142;
+  object-fit: cover;
+  border-radius: 30px;
+  border: 5px solid var(--accent);
+  box-shadow: 0 30px 90px rgba(0, 0, 0, 0.55);
+  display: block;
+  margin: 0 auto;
+}
+.skjerm-winner-name {
+  font-family: 'Anton', sans-serif;
+  font-size: clamp(40px, 6vw, 88px);
+  margin: 0;
+  line-height: 1;
+}
+
+/* Leaderboard */
+.skjerm-leaderboard {
+  width: min(920px, 92vw);
+  display: flex;
+  flex-direction: column;
+  gap: 1vh;
+  max-height: 58vh;
+  overflow-y: auto;
+  padding: 4px;
+}
+.skjerm-lb-row {
+  display: grid;
+  grid-template-columns: 60px 1fr auto;
+  align-items: center;
+  gap: 16px;
+  background: var(--bg-card-2);
+  border-radius: 16px;
+  padding: 14px 26px;
+  font-size: clamp(16px, 1.8vw, 26px);
+  text-align: left;
+}
+.skjerm-lb-row.top {
+  background: linear-gradient(90deg, rgba(255, 59, 92, 0.2), rgba(255, 59, 92, 0.03));
+  border: 2px solid rgba(255, 59, 92, 0.4);
+}
+.skjerm-lb-rank {
+  font-family: 'Anton', sans-serif;
+  font-size: clamp(20px, 2.2vw, 32px);
+  color: var(--text-dim);
+  text-align: center;
+}
+.skjerm-lb-row.top .skjerm-lb-rank { color: var(--accent); }
+.skjerm-lb-score {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+  padding: 6px 18px;
+  font-weight: 700;
+  font-size: clamp(14px, 1.4vw, 20px);
+  white-space: nowrap;
+}

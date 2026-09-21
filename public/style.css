@@ -345,6 +345,99 @@ main#app {
   z-index: 50;
 }
 
+.announcement-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(5, 5, 8, 0.88);
+  backdrop-filter: blur(6px);
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  animation: overlay-fade-in 0.25s ease;
+}
+.announcement-overlay[hidden] { display: none; }
+
+.announcement-card {
+  position: relative;
+  max-width: 420px;
+  width: 100%;
+  background: var(--bg-card);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 24px;
+  padding: 36px 24px 28px;
+  text-align: center;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.55);
+  animation: overlay-pop-in 0.35s cubic-bezier(0.2, 1.3, 0.4, 1);
+}
+
+.announcement-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: none;
+  background: var(--bg-card-2);
+  color: var(--text-dim);
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.announcement-card img {
+  width: 180px;
+  aspect-ratio: 125 / 142;
+  object-fit: cover;
+  border-radius: 18px;
+  margin: 14px auto;
+  display: block;
+  border: 3px solid var(--accent);
+}
+
+.announcement-eyebrow {
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  font-size: 12px;
+  color: var(--text-dim);
+  font-weight: 700;
+  margin: 0;
+}
+
+.announcement-title {
+  font-family: 'Anton', sans-serif;
+  font-size: 28px;
+  margin: 8px 0 0;
+}
+
+.announcement-rank {
+  font-family: 'Anton', sans-serif;
+  font-size: 52px;
+  color: var(--accent);
+  margin: 4px 0 0;
+}
+
+.announcement-verdict {
+  font-size: 15px;
+  font-weight: 700;
+  border-radius: 12px;
+  padding: 12px;
+  margin-top: 16px;
+}
+.announcement-verdict.correct { background: rgba(111, 224, 138, 0.14); color: var(--success); }
+.announcement-verdict.wrong { background: rgba(255, 92, 92, 0.14); color: var(--danger); }
+.announcement-verdict.neutral { background: var(--bg-card-2); color: var(--text-dim); }
+
+@keyframes overlay-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes overlay-pop-in {
+  from { transform: scale(0.85); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
 @media (min-width: 480px) {
   .tally-row { grid-template-columns: 100px 1fr 50px; }
 }

@@ -13,7 +13,6 @@
 
   const voterId = getVoterId();
   let lastPhase = null;
-  let currentState = null;
 
   function esc(str) {
     return String(str || '').replace(/[&<>"']/g, (c) => ({
@@ -30,9 +29,8 @@
     try {
       const res = await fetch(`/api/state?voterId=${encodeURIComponent(voterId)}`);
       const data = await res.json();
-      currentState = data;
       render(data);
-      maybeConfetti(data.phase);
+      handlePhaseChange(data);
       lastPhase = data.phase;
     } catch (err) {
       console.error('Klarte ikke å hente status', err);
@@ -142,25 +140,21 @@
     `;
   }
 
+  function verdictFor(match, myPick) {
+    if (!myPick) return { className: 'neutral', text: 'Du rakk ikke å tippe denne kampen.' };
+    if (myPick === match.winner.id) return { className: 'correct', text: '✅ Du tippet riktig!' };
+    return { className: 'wrong', text: '❌ Du tippet feil denne gangen.' };
+  }
+
   function renderMatchResult(matchId, title, match, myPick) {
-    let verdictClass = 'neutral';
-    let verdictText = 'Du rakk ikke å tippe denne kampen.';
-    if (myPick) {
-      if (myPick === match.winner.id) {
-        verdictClass = 'correct';
-        verdictText = '✅ Du tippet riktig!';
-      } else {
-        verdictClass = 'wrong';
-        verdictText = '❌ Du tippet feil denne gangen.';
-      }
-    }
+    const verdict = verdictFor(match, myPick);
     return `
       <section class="card result-view">
         <p class="eyebrow">Avgjort i runde ${match.decidingRound}</p>
         <h2>🏆 Vinner</h2>
         <img src="${match.winner.photo}" alt="${esc(match.winner.name)}" />
         <p class="result-name" style="color:${match.winner.color}">${esc(match.winner.name)}</p>
-        <p class="result-verdict ${verdictClass}">${verdictText}</p>
+        <p class="result-verdict ${verdict.className}">${verdict.text}</p>
         ${renderTally(match)}
       </section>
     `;
@@ -267,61 +261,67 @@
     }
   });
 
-  // --- Confetti ---
-  const canvas = document.getElementById('confetti-canvas');
-  const ctx = canvas.getContext('2d');
-  let confettiParticles = [];
-  let confettiRAF = null;
+  const confetti = createConfetti(document.getElementById('confetti-canvas'));
 
-  function resizeCanvas() {
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
+  // --- Announcement overlay (full-screen popup on your phone when a result drops) ---
+  const overlay = document.getElementById('announcement-overlay');
+  const overlayContent = document.getElementById('announcement-content');
+
+  function showAnnouncement(html) {
+    overlayContent.innerHTML = html;
+    overlay.hidden = false;
   }
-  window.addEventListener('resize', resizeCanvas);
-  resizeCanvas();
 
-  const CONFETTI_COLORS = ['#f6b9e2', '#f6dd90', '#9db6ce', '#a8c29e', '#ff3b5c', '#ffffff'];
+  function hideAnnouncement() {
+    overlay.hidden = true;
+  }
 
-  function fireConfetti() {
-    confettiParticles = Array.from({ length: 140 }, () => ({
-      x: Math.random() * canvas.width,
-      y: -20 - Math.random() * canvas.height * 0.3,
-      r: 4 + Math.random() * 5,
-      color: CONFETTI_COLORS[Math.floor(Math.random() * CONFETTI_COLORS.length)],
-      vy: 2 + Math.random() * 3,
-      vx: -1.5 + Math.random() * 3,
-      rot: Math.random() * Math.PI,
-      vRot: -0.1 + Math.random() * 0.2,
-    }));
-    const start = performance.now();
-    if (confettiRAF) cancelAnimationFrame(confettiRAF);
-    function tick(now) {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      confettiParticles.forEach((p) => {
-        p.x += p.vx;
-        p.y += p.vy;
-        p.rot += p.vRot;
-        ctx.save();
-        ctx.translate(p.x, p.y);
-        ctx.rotate(p.rot);
-        ctx.fillStyle = p.color;
-        ctx.fillRect(-p.r / 2, -p.r / 2, p.r, p.r * 0.6);
-        ctx.restore();
-      });
-      if (now - start < 3200) {
-        confettiRAF = requestAnimationFrame(tick);
-      } else {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-      }
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay || e.target.closest('[data-action="close-announcement"]')) {
+      hideAnnouncement();
     }
-    confettiRAF = requestAnimationFrame(tick);
+  });
+
+  function buildAnnouncementHTML(phase, state) {
+    if (!state.registered) return null;
+
+    if (phase === 'match1_result' || phase === 'match2_result') {
+      const match = phase === 'match1_result' ? state.match1 : state.match2;
+      const myPick = phase === 'match1_result' ? state.myPicks.match1 : state.myPicks.match2;
+      const verdict = verdictFor(match, myPick);
+      return `
+        <p class="announcement-eyebrow">Avgjort i runde ${match.decidingRound}</p>
+        <p class="announcement-title">🏆 ${esc(match.winner.name)} vinner!</p>
+        <img src="${match.winner.photo}" alt="${esc(match.winner.name)}" />
+        <p class="announcement-verdict ${verdict.className}">${verdict.text}</p>
+      `;
+    }
+
+    if (phase === 'final' && state.leaderboard) {
+      const rows = state.leaderboard.rows;
+      const myIndex = rows.findIndex((row) => row.voterId === voterId);
+      if (myIndex === -1) return null;
+      const me = rows[myIndex];
+      const topScore = rows.length ? rows[0].correct : 0;
+      const isChampion = me.correct === topScore && topScore > 0;
+      return `
+        <p class="announcement-eyebrow">Kvelden er over</p>
+        <p class="announcement-rank">#${myIndex + 1}</p>
+        <p class="announcement-title">${esc(me.name)}</p>
+        <p class="announcement-verdict ${isChampion ? 'correct' : 'neutral'}">${me.correct}/${me.voted} riktig${isChampion ? ' — du er en av kveldens gamblere! 🏆' : ''}</p>
+      `;
+    }
+
+    return null;
   }
 
-  function maybeConfetti(phase) {
+  function handlePhaseChange(state) {
     if (lastPhase === null) return;
-    if (phase === lastPhase) return;
-    if (phase.endsWith('_result') || phase === 'final') {
-      fireConfetti();
+    if (state.phase === lastPhase) return;
+    if (state.phase.endsWith('_result') || state.phase === 'final') {
+      confetti.fire();
+      const html = buildAnnouncementHTML(state.phase, state);
+      if (html) showAnnouncement(html);
     }
   }
 

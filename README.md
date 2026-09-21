@@ -7,7 +7,11 @@ En "gambling"-side til Ledertalent-presentasjonen. Publikum registrerer navnet s
 - 🥊 Petra Processor
 - 🥊 Pål Producer
 
-Du (presentasjonsholderen) styrer kvelden fra en egen admin-side, og publikum følger med og tipper fra mobilen sin.
+Du (presentasjonsholderen) styrer kvelden fra en egen admin-side, publikum tipper fra mobilen sin, og en storskjerm-visning projiseres i rommet for den store, felles avsløringen.
+
+- **Publikumsside** (`/`) — registrering + tipping. Når en kamp avgjøres, spretter det opp en full-skjerm-annonsering med vinneren og din egen fasit (riktig/feil), pluss konfetti.
+- **Storskjerm** (`/skjerm.html`) — en ren visningsside uten registrering, laget for å projiseres. Viser live tipping-fordeling, vinner-avsløringer og sluttresultatet for hele salen.
+- **Admin** (`/admin.html`) — styrer hvilken fase kvelden er i.
 
 ## Kampoppsettet
 
@@ -26,6 +30,7 @@ npm start
 Serveren starter på `http://localhost:3000`. Admin-passordet skrives ut i terminalen når serveren starter (standard: `ledertalent` — bytt det, se under).
 
 - **Publikumsside:** `http://localhost:3000/`
+- **Storskjerm:** `http://localhost:3000/skjerm.html`
 - **Adminpanel:** `http://localhost:3000/admin.html`
 
 ## Slik bruker du admin-panelet under presentasjonen
@@ -40,6 +45,13 @@ Serveren starter på `http://localhost:3000`. Admin-passordet skrives ut i termi
 6. **Sluttresultat** – viser leaderboard over kveldens beste gamblere
 
 Du kan alltid gå tilbake til en tidligere fase om noe går galt, og "Nullstill alt" sletter alle påmeldte/tips om du vil kjøre en generalprøve før selve presentasjonen.
+
+## Slik annonserer dere hvem som tippet riktig
+
+Det skjer på to steder samtidig, begge trigges automatisk når du trykker "Vis resultat" i admin-panelet:
+
+- **På storskjermen** (`/skjerm.html`) — koble en laptop til projektoren, åpne denne siden i fullskjerm (F11) og la den stå gjennom hele presentasjonen. Den trenger ikke registrering og viser automatisk riktig fase: kampfordeling, vinner-avsløring med konfetti, og til slutt en felles leaderboard med alle navn og poengsum.
+- **På hver mobil** — i det øyeblikket du avslører resultatet, spretter det opp en full-skjerm-boks på telefonen til alle som har tippet, med vinneren og en personlig "✅ Du tippet riktig!" / "❌ Du tippet feil". Samme skjer ved sluttresultatet, da med personlig plassering. Boksen lukkes ved å trykke utenfor eller på krysset.
 
 ## Slik får publikum tilgang fra mobilen
 
