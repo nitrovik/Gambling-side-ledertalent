@@ -50,10 +50,10 @@
       ${renderHeader()}
       <p class="skjerm-tagline">Fire ledertyper. To kamper. Gambl på vinneren! 🥊</p>
       <div class="skjerm-fighter-grid">
-        <img src="images/rita_card.png" alt="Rita Relator" />
-        <img src="images/morten_card.png" alt="Morten Motivator" />
-        <img src="images/petra_card.png" alt="Petra Processor" />
-        <img src="images/pal_card.png" alt="Pål Producer" />
+        <div class="skjerm-fighter-tile"><img src="images/rita_card.png" alt="Rita Relator" /><p class="skjerm-fighter-type" style="color:#f6b9e2">Relasjoner og stemning</p></div>
+        <div class="skjerm-fighter-tile"><img src="images/morten_card.png" alt="Morten Motivator" /><p class="skjerm-fighter-type" style="color:#f6dd90">Energi og engasjement</p></div>
+        <div class="skjerm-fighter-tile"><img src="images/petra_card.png" alt="Petra Processor" /><p class="skjerm-fighter-type" style="color:#9db6ce">Fakta og metode</p></div>
+        <div class="skjerm-fighter-tile"><img src="images/pal_card.png" alt="Pål Producer" /><p class="skjerm-fighter-type" style="color:#a8c29e">Mål og resultat</p></div>
       </div>
       <p class="skjerm-join">Bli med og tipp på <strong>${esc(JOIN_URL)}</strong></p>
       <p class="skjerm-count">${state.registeredCount} har blitt med så langt</p>
@@ -68,11 +68,13 @@
         <div class="skjerm-fighter">
           <img src="${match.fighterA.photo}" alt="${esc(match.fighterA.name)}" style="border-color:${match.fighterA.color}" />
           <p class="skjerm-fighter-name" style="color:${match.fighterA.color}">${esc(match.fighterA.name)}</p>
+          <p class="skjerm-fighter-type">${esc(match.fighterA.type)}</p>
         </div>
         <p class="skjerm-vs">VS</p>
         <div class="skjerm-fighter">
           <img src="${match.fighterB.photo}" alt="${esc(match.fighterB.name)}" style="border-color:${match.fighterB.color}" />
           <p class="skjerm-fighter-name" style="color:${match.fighterB.color}">${esc(match.fighterB.name)}</p>
+          <p class="skjerm-fighter-type">${esc(match.fighterB.type)}</p>
         </div>
       </div>
       ${renderTally(match)}

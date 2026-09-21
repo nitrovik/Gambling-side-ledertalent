@@ -85,10 +85,10 @@
         <h2>Kampene starter snart!</h2>
         <p>Fire ledertyper møtes i ringen. To kamper. Gjør deg klar til å tippe vinneren.</p>
         <div class="fighter-grid">
-          <img src="images/rita_card.png" alt="Rita Relator" />
-          <img src="images/morten_card.png" alt="Morten Motivator" />
-          <img src="images/petra_card.png" alt="Petra Processor" />
-          <img src="images/pal_card.png" alt="Pål Producer" />
+          <div class="fighter-tile"><img src="images/rita_card.png" alt="Rita Relator" /><p class="fighter-type" style="color:#f6b9e2">Relasjoner og stemning</p></div>
+          <div class="fighter-tile"><img src="images/morten_card.png" alt="Morten Motivator" /><p class="fighter-type" style="color:#f6dd90">Energi og engasjement</p></div>
+          <div class="fighter-tile"><img src="images/petra_card.png" alt="Petra Processor" /><p class="fighter-type" style="color:#9db6ce">Fakta og metode</p></div>
+          <div class="fighter-tile"><img src="images/pal_card.png" alt="Pål Producer" /><p class="fighter-type" style="color:#a8c29e">Mål og resultat</p></div>
         </div>
       </section>
     `;
@@ -99,6 +99,7 @@
       <button class="fighter-pick ${isSelected ? 'selected' : ''}" data-action="pick" data-match="${matchId}" data-pick="${fighter.id}" ${disabled ? 'disabled' : ''} style="border-color:${isSelected ? fighter.color : 'transparent'}">
         <img src="${fighter.photo}" alt="${esc(fighter.name)}" />
         <span class="fighter-name" style="color:${fighter.color}">${esc(fighter.name)}</span>
+        <span class="fighter-type-tag">${esc(fighter.type)}</span>
       </button>
     `;
   }
@@ -126,15 +127,17 @@
   }
 
   function renderMatchOpen(matchId, title, match, myPick) {
+    const locked = !!myPick;
+    const pickedName = locked ? (myPick === match.fighterA.id ? match.fighterA.name : match.fighterB.name) : '';
     return `
       <section class="card">
         <p class="match-title">${title}</p>
         <div class="versus">
-          ${fighterPick(matchId, match.fighterA, myPick === match.fighterA.id, false)}
+          ${fighterPick(matchId, match.fighterA, myPick === match.fighterA.id, locked)}
           <div class="vs-badge">VS</div>
-          ${fighterPick(matchId, match.fighterB, myPick === match.fighterB.id, false)}
+          ${fighterPick(matchId, match.fighterB, myPick === match.fighterB.id, locked)}
         </div>
-        <p class="pick-confirm">${myPick ? `Du har tippet ${esc((myPick === match.fighterA.id ? match.fighterA.name : match.fighterB.name))}! Du kan bytte helt til kampen avgjøres.` : 'Trykk på en fighter for å tippe'}</p>
+        <p class="pick-confirm">${locked ? `🔒 Valget ditt er låst: ${esc(pickedName)}. Dette kan ikke endres.` : 'Trykk på en fighter for å tippe — valget låses med en gang!'}</p>
         ${renderTally(match)}
       </section>
     `;

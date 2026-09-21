@@ -165,13 +165,21 @@ main#app {
 .fighter-grid {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 10px;
+  gap: 14px;
   margin-top: 16px;
 }
-.fighter-grid img {
+.fighter-tile img {
   width: 100%;
   border-radius: 12px;
   display: block;
+}
+.fighter-type {
+  text-align: center;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin: 6px 0 0;
 }
 
 .match-title {
@@ -206,6 +214,7 @@ main#app {
 .fighter-pick:active { transform: scale(0.97); }
 .fighter-pick.selected { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(255,59,92,0.25); }
 .fighter-pick:disabled { cursor: default; }
+.fighter-pick:disabled:not(.selected) { opacity: 0.4; }
 
 .fighter-pick img {
   width: 100%;
@@ -216,10 +225,23 @@ main#app {
 
 .fighter-pick .fighter-name {
   display: block;
-  padding: 10px 8px;
+  padding: 10px 8px 2px;
   font-size: 13px;
   font-weight: 700;
   text-align: center;
+}
+
+.fighter-pick .fighter-type-tag {
+  display: block;
+  padding: 0 6px 10px;
+  font-size: 10px;
+  line-height: 1.3;
+  font-weight: 600;
+  text-align: center;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  overflow-wrap: break-word;
 }
 
 .vs-badge {

@@ -9,12 +9,16 @@ const DATA_FILE = path.join(__dirname, 'data', 'state.json');
 
 const FIGHTERS = {
   rita: { id: 'rita', name: 'Rita Relator', color: '#f6b9e2', image: 'images/rita_card.png', photo: 'images/rita_photo.png',
+    type: 'Relasjoner og stemning',
     quote: 'Når det oppstår dårlig stemning eller relasjonen mellom mennesker blir truet' },
   morten: { id: 'morten', name: 'Morten Motivator', color: '#f6dd90', image: 'images/morten_card.png', photo: 'images/morten_photo.png',
+    type: 'Energi og engasjement',
     quote: 'Når energi, engasjement eller muligheten til å bli hørt blir blokkert' },
   petra: { id: 'petra', name: 'Petra Processor', color: '#9db6ce', image: 'images/petra_card.png', photo: 'images/petra_photo.png',
+    type: 'Fakta og metode',
     quote: 'Når det er uenighet om fakta, regler, metode eller hva som er riktig' },
   pal: { id: 'pal', name: 'Pål Producer', color: '#a8c29e', image: 'images/pal_card.png', photo: 'images/pal_photo.png',
+    type: 'Mål og resultat',
     quote: 'Når noe eller noen står i veien for målet/resultatet' },
 };
 
@@ -149,6 +153,7 @@ app.post('/api/vote', (req, res) => {
   if (!def) return res.status(400).json({ error: 'Ukjent kamp' });
   if (state.phase !== `${matchId}_open`) return res.status(400).json({ error: 'Tippingen for denne kampen er ikke åpen' });
   if (pick !== def.fighterA && pick !== def.fighterB) return res.status(400).json({ error: 'Ugyldig valg' });
+  if (state.votes[matchId][voterId]) return res.status(400).json({ error: 'Du har allerede tippet denne kampen — valget er låst.' });
 
   state.votes[matchId][voterId] = pick;
   saveState();

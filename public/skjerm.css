@@ -55,11 +55,14 @@ body.skjerm-body {
   max-width: 1200px;
   width: 100%;
 }
-.skjerm-fighter-grid img {
+.skjerm-fighter-tile img {
   width: 100%;
   display: block;
   border-radius: 20px;
   box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+}
+.skjerm-fighter-tile .skjerm-fighter-type {
+  margin: 10px 0 0;
 }
 
 .skjerm-join {
@@ -131,6 +134,14 @@ body.skjerm-body {
 .skjerm-fighter-name {
   font-family: 'Anton', sans-serif;
   font-size: clamp(22px, 2.8vw, 42px);
+  margin: 0;
+}
+.skjerm-fighter-type {
+  font-size: clamp(12px, 1.2vw, 18px);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-dim);
   margin: 0;
 }
 
