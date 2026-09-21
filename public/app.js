@@ -13,6 +13,8 @@
 
   const voterId = getVoterId();
   let lastPhase = null;
+  let currentState = null;
+  const pendingPicks = { match1: null, match2: null };
 
   function esc(str) {
     return String(str || '').replace(/[&<>"']/g, (c) => ({
@@ -29,6 +31,7 @@
     try {
       const res = await fetch(`/api/state?voterId=${encodeURIComponent(voterId)}`);
       const data = await res.json();
+      currentState = data;
       render(data);
       handlePhaseChange(data);
       lastPhase = data.phase;
@@ -114,9 +117,9 @@
     `;
   }
 
-  function fighterPick(matchId, fighter, isSelected, disabled) {
+  function fighterPick(matchId, fighter, isSelected, locked) {
     return `
-      <button class="fighter-pick ${isSelected ? 'selected' : ''}" data-action="pick" data-match="${matchId}" data-pick="${fighter.id}" ${disabled ? 'disabled' : ''} style="border-color:${isSelected ? fighter.color : 'transparent'}">
+      <button class="fighter-pick ${isSelected ? 'selected' : ''}" data-action="select" data-match="${matchId}" data-pick="${fighter.id}" ${locked ? 'disabled' : ''} style="border-color:${isSelected ? fighter.color : 'transparent'}">
         <img src="${fighter.photo}" alt="${esc(fighter.name)}" />
         <span class="fighter-name" style="color:${fighter.color}">${esc(fighter.name)}</span>
         <span class="fighter-type-tag">${esc(fighter.type)}</span>
@@ -148,16 +151,38 @@
 
   function renderMatchOpen(matchId, title, match, myPick) {
     const locked = !!myPick;
-    const pickedName = locked ? (myPick === match.fighterA.id ? match.fighterA.name : match.fighterB.name) : '';
+    const pending = pendingPicks[matchId];
+    const selectedId = locked ? myPick : pending;
+    const selectedFighter = selectedId
+      ? (selectedId === match.fighterA.id ? match.fighterA : match.fighterB)
+      : null;
+
+    let message;
+    let messageClass = '';
+    if (locked) {
+      message = `🔒 Valget ditt er låst: ${esc(selectedFighter.name)}. Dette kan ikke endres.`;
+      messageClass = 'locked';
+    } else if (pending) {
+      message = `Du har valgt ${esc(selectedFighter.name)}. Trykk "Lås svar" for å bekrefte!`;
+      messageClass = 'pending';
+    } else {
+      message = 'Trykk på en fighter for å velge.';
+    }
+
     return `
       <section class="card">
         <p class="match-title">${title}</p>
         <div class="versus">
-          ${fighterPick(matchId, match.fighterA, myPick === match.fighterA.id, locked)}
+          ${fighterPick(matchId, match.fighterA, selectedId === match.fighterA.id, locked)}
           <div class="vs-badge">VS</div>
-          ${fighterPick(matchId, match.fighterB, myPick === match.fighterB.id, locked)}
+          ${fighterPick(matchId, match.fighterB, selectedId === match.fighterB.id, locked)}
         </div>
-        <p class="pick-confirm">${locked ? `🔒 Valget ditt er låst: ${esc(pickedName)}. Dette kan ikke endres.` : 'Trykk på en fighter for å tippe — valget låses med en gang!'}</p>
+        <p class="pick-confirm ${messageClass}">${message}</p>
+        ${!locked ? `
+          <button class="btn lock-btn" data-action="lock" data-match="${matchId}" ${pending ? '' : 'disabled'}>
+            ${pending ? `🔒 Lås svar: ${esc(selectedFighter.name)}` : '🔒 Lås svar'}
+          </button>
+        ` : ''}
         ${renderTally(match)}
       </section>
     `;
@@ -277,9 +302,16 @@
       }
     }
 
-    if (btn.dataset.action === 'pick') {
+    if (btn.dataset.action === 'select') {
       const matchId = btn.dataset.match;
-      const pick = btn.dataset.pick;
+      pendingPicks[matchId] = btn.dataset.pick;
+      if (currentState) render(currentState);
+    }
+
+    if (btn.dataset.action === 'lock') {
+      const matchId = btn.dataset.match;
+      const pick = pendingPicks[matchId];
+      if (!pick) return;
       btn.disabled = true;
       try {
         await vote(matchId, pick);
