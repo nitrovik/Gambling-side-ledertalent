@@ -1,0 +1,91 @@
+.admin-app {
+  max-width: 560px;
+  margin: 0 auto;
+  padding: 8px 16px 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.phase-badge {
+  display: inline-block;
+  background: var(--bg-card-2);
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-size: 13px;
+  color: var(--text-dim);
+  margin-bottom: 4px;
+}
+
+.phase-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.phase-btn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.1);
+  background: var(--bg-card-2);
+  color: var(--text);
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: left;
+}
+
+.phase-btn.active {
+  border-color: var(--accent);
+  background: rgba(255,59,92,0.14);
+}
+
+.phase-btn small {
+  color: var(--text-dim);
+  font-weight: 400;
+  display: block;
+  margin-top: 2px;
+}
+
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+
+.stat-box {
+  background: var(--bg-card-2);
+  border-radius: 12px;
+  padding: 12px 14px;
+  text-align: center;
+}
+.stat-box .num {
+  font-family: 'Anton', sans-serif;
+  font-size: 24px;
+  display: block;
+}
+.stat-box .label {
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
+.voter-list {
+  font-size: 13px;
+  color: var(--text-dim);
+  line-height: 1.7;
+  max-height: 160px;
+  overflow-y: auto;
+}
+
+.danger-btn {
+  background: transparent;
+  border: 1px solid rgba(255,92,92,0.4);
+  color: var(--danger);
+}
+
+.login-form input {
+  margin-bottom: 12px;
+}

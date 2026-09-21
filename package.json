@@ -1,0 +1,13 @@
+{
+  "name": "ledertalent-fight-gamble",
+  "version": "1.0.0",
+  "private": true,
+  "description": "UFC-inspired gambling side for Ledertalent-presentasjonen",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2"
+  }
+}
