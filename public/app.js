@@ -219,6 +219,17 @@
       return;
     }
 
+    // The lobby is static (no live data to reflect) — re-mounting it every poll
+    // would replay its entrance/idle animations from scratch. Just keep the
+    // welcome banner's headcount fresh instead of touching the fighter grid.
+    if (state.phase === 'lobby' && document.querySelector('.arena-lobby')) {
+      const welcome = document.querySelector('.welcome');
+      if (welcome) {
+        welcome.innerHTML = `Du gambler som <strong>${esc(state.voterName)}</strong> · ${state.registeredCount} påmeldt`;
+      }
+      return;
+    }
+
     sections.push(renderWelcome(state));
 
     switch (state.phase) {

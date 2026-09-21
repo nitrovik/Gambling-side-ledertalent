@@ -135,6 +135,15 @@
   }
 
   function render(state) {
+    // The lobby fighter grid is static — re-mounting it every poll would
+    // replay its entrance/idle animations from scratch. Just keep the
+    // headcount fresh instead of touching the grid.
+    if (state.phase === 'lobby' && document.querySelector('.skjerm-arena-grid')) {
+      const count = document.querySelector('.skjerm-count');
+      if (count) count.textContent = `${state.registeredCount} har blitt med så langt`;
+      return;
+    }
+
     switch (state.phase) {
       case 'match1_open':
         APP.innerHTML = renderMatchOpen('KAMP 1', state.match1);
