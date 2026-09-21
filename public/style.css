@@ -50,6 +50,33 @@ body {
   bottom: -140px; right: -120px;
 }
 
+.embers {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+.embers span {
+  position: absolute;
+  bottom: -20px;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--accent);
+  opacity: 0;
+  box-shadow: 0 0 8px 2px rgba(255, 59, 92, 0.6);
+  animation-name: ember-float;
+  animation-timing-function: ease-in;
+  animation-iteration-count: infinite;
+}
+@keyframes ember-float {
+  0% { transform: translate(0, 0); opacity: 0; }
+  10% { opacity: 0.8; }
+  90% { opacity: 0.35; }
+  100% { transform: translate(20px, -100vh); opacity: 0; }
+}
+
 .hero {
   position: relative;
   z-index: 1;
@@ -162,24 +189,117 @@ main#app {
 }
 .welcome strong { color: var(--text); }
 
-.fighter-grid {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 14px;
-  margin-top: 16px;
-}
-.fighter-tile img {
-  width: 100%;
-  border-radius: 12px;
-  display: block;
-}
-.fighter-type {
+/* Arena lobby */
+.arena-lobby {
   text-align: center;
+  padding: 4px 0 4px;
+}
+
+.arena-ticker {
+  overflow: hidden;
+  white-space: nowrap;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 8px 0;
+  margin: 2px 0 22px;
+}
+.arena-ticker-track {
+  display: inline-flex;
+  animation: ticker-scroll 16s linear infinite;
+}
+.arena-ticker-track span {
   font-size: 12px;
   font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--text-dim);
   text-transform: uppercase;
-  letter-spacing: 0.06em;
-  margin: 6px 0 0;
+  white-space: nowrap;
+}
+@keyframes ticker-scroll {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+
+.arena-heading {
+  font-family: 'Anton', sans-serif;
+  font-size: 26px;
+  letter-spacing: 0.02em;
+  margin: 4px 0 6px;
+}
+.arena-sub {
+  color: var(--text-dim);
+  font-size: 14px;
+  margin: 0 0 22px;
+}
+
+.arena-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 22px 14px;
+}
+
+.arena-fighter {
+  position: relative;
+  animation: fighter-enter 0.65s cubic-bezier(0.34, 1.56, 0.64, 1) backwards;
+  transition: transform 0.15s ease;
+}
+.arena-fighter:active { transform: scale(0.95); }
+
+.arena-fighter-photo-wrap {
+  position: relative;
+}
+
+.arena-fighter-glow {
+  position: absolute;
+  inset: 10%;
+  border-radius: 50%;
+  filter: blur(22px);
+  opacity: 0.5;
+  animation: fighter-glow-pulse 3.2s ease-in-out infinite;
+}
+
+.arena-fighter-frame {
+  position: relative;
+  border-radius: 20px;
+  overflow: hidden;
+  border: 3px solid;
+  background: var(--bg-card-2);
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.45);
+  animation: fighter-idle 3.4s ease-in-out infinite;
+}
+.arena-fighter-frame img {
+  width: 100%;
+  aspect-ratio: 125 / 142;
+  object-fit: cover;
+  display: block;
+}
+
+.arena-fighter-name {
+  position: relative;
+  margin: 10px 0 0;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+@keyframes fighter-enter {
+  0% { opacity: 0; transform: translateY(36px) scale(0.6) rotate(-6deg); }
+  65% { opacity: 1; transform: translateY(-6px) scale(1.04) rotate(1.5deg); }
+  100% { opacity: 1; transform: translateY(0) scale(1) rotate(0deg); }
+}
+
+@keyframes fighter-idle {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  22% { transform: translateY(-6px) rotate(-1.5deg); }
+  42% { transform: translateY(0) rotate(0deg); }
+  56% { transform: translate(5px, -2px) rotate(2.5deg); }
+  64% { transform: translate(-2px, 0) rotate(-1deg); }
+  72% { transform: translateY(0) rotate(0deg); }
+  86% { transform: translateY(-3px) rotate(1deg); }
+}
+
+@keyframes fighter-glow-pulse {
+  0%, 100% { opacity: 0.35; transform: scale(0.92); }
+  50% { opacity: 0.65; transform: scale(1.08); }
 }
 
 .match-title {

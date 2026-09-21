@@ -4,6 +4,7 @@ html, body.skjerm-body {
 body.skjerm-body {
   overflow-y: auto;
   overflow-x: hidden;
+  padding-bottom: 0;
 }
 
 .skjerm-app {
@@ -14,8 +15,8 @@ body.skjerm-body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 2.5vh;
-  padding: 3vh 4vw;
+  gap: 2vh;
+  padding: 2.5vh 4vw;
   text-align: center;
   box-sizing: border-box;
 }
@@ -47,22 +48,99 @@ body.skjerm-body {
   margin: 0;
 }
 
-/* Lobby */
-.skjerm-fighter-grid {
+/* Lobby ticker */
+.skjerm-ticker {
+  overflow: hidden;
+  white-space: nowrap;
+  width: min(1400px, 94vw);
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 6px 0;
+}
+.skjerm-ticker-track {
+  display: inline-flex;
+  animation: skjerm-ticker-scroll 20s linear infinite;
+}
+.skjerm-ticker-track span {
+  font-size: clamp(14px, 1.4vw, 20px);
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+@keyframes skjerm-ticker-scroll {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+
+/* Lobby fighter arena */
+.skjerm-arena-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(260px, 1fr));
-  gap: 2vw;
-  max-width: 1200px;
+  grid-template-columns: repeat(4, minmax(140px, 1fr));
+  gap: clamp(14px, 2vw, 32px);
+  max-width: 1280px;
   width: 100%;
 }
-.skjerm-fighter-tile img {
+
+.skjerm-arena-fighter {
+  animation: skjerm-fighter-enter 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) backwards;
+}
+
+.skjerm-arena-photo-wrap {
+  position: relative;
+}
+
+.skjerm-arena-glow {
+  position: absolute;
+  inset: 8%;
+  border-radius: 50%;
+  filter: blur(28px);
+  opacity: 0.55;
+  animation: skjerm-glow-pulse 3.2s ease-in-out infinite;
+}
+
+.skjerm-arena-frame {
+  position: relative;
+  border-radius: 24px;
+  overflow: hidden;
+  border: 4px solid;
+  background: var(--bg-card-2);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5);
+  animation: skjerm-fighter-idle 3.6s ease-in-out infinite;
+}
+.skjerm-arena-frame img {
   width: 100%;
+  aspect-ratio: 125 / 142;
+  object-fit: cover;
   display: block;
-  border-radius: 20px;
-  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
 }
-.skjerm-fighter-tile .skjerm-fighter-type {
-  margin: 10px 0 0;
+
+.skjerm-arena-name {
+  font-family: 'Anton', sans-serif;
+  font-size: clamp(16px, 1.8vw, 30px);
+  margin: 14px 0 0;
+}
+
+@keyframes skjerm-fighter-enter {
+  0% { opacity: 0; transform: translateY(60px) scale(0.6) rotate(-6deg); }
+  65% { opacity: 1; transform: translateY(-10px) scale(1.04) rotate(1.5deg); }
+  100% { opacity: 1; transform: translateY(0) scale(1) rotate(0deg); }
+}
+
+@keyframes skjerm-fighter-idle {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  22% { transform: translateY(-10px) rotate(-1.5deg); }
+  42% { transform: translateY(0) rotate(0deg); }
+  56% { transform: translate(8px, -4px) rotate(2.5deg); }
+  64% { transform: translate(-3px, 0) rotate(-1deg); }
+  72% { transform: translateY(0) rotate(0deg); }
+  86% { transform: translateY(-5px) rotate(1deg); }
+}
+
+@keyframes skjerm-glow-pulse {
+  0%, 100% { opacity: 0.4; transform: scale(0.92); }
+  50% { opacity: 0.7; transform: scale(1.1); }
 }
 
 .skjerm-join {

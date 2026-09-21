@@ -79,17 +79,37 @@
     `;
   }
 
+  const LOBBY_FIGHTERS = [
+    { name: 'Rita Relator', photo: 'images/rita_photo.png', color: '#f6b9e2' },
+    { name: 'Morten Motivator', photo: 'images/morten_photo.png', color: '#f6dd90' },
+    { name: 'Petra Processor', photo: 'images/petra_photo.png', color: '#9db6ce' },
+    { name: 'Pål Producer', photo: 'images/pal_photo.png', color: '#a8c29e' },
+  ];
+
   function renderLobby() {
-    return `
-      <section class="card">
-        <h2>Kampene starter snart!</h2>
-        <p>Fire ledertyper møtes i ringen. To kamper. Gjør deg klar til å tippe vinneren.</p>
-        <div class="fighter-grid">
-          <div class="fighter-tile"><img src="images/rita_card.png" alt="Rita Relator" /><p class="fighter-type" style="color:#f6b9e2">Relasjoner og stemning</p></div>
-          <div class="fighter-tile"><img src="images/morten_card.png" alt="Morten Motivator" /><p class="fighter-type" style="color:#f6dd90">Energi og engasjement</p></div>
-          <div class="fighter-tile"><img src="images/petra_card.png" alt="Petra Processor" /><p class="fighter-type" style="color:#9db6ce">Fakta og metode</p></div>
-          <div class="fighter-tile"><img src="images/pal_card.png" alt="Pål Producer" /><p class="fighter-type" style="color:#a8c29e">Mål og resultat</p></div>
+    const tiles = LOBBY_FIGHTERS.map((f, i) => `
+      <div class="arena-fighter" style="animation-delay:${(i * 0.12).toFixed(2)}s">
+        <div class="arena-fighter-photo-wrap">
+          <div class="arena-fighter-glow" style="background:${f.color}; animation-delay:${(i * 0.3).toFixed(2)}s"></div>
+          <div class="arena-fighter-frame" style="border-color:${f.color}; animation-delay:${(i * 0.4).toFixed(2)}s">
+            <img src="${f.photo}" alt="${esc(f.name)}" />
+          </div>
         </div>
+        <p class="arena-fighter-name" style="color:${f.color}">${esc(f.name)}</p>
+      </div>
+    `).join('');
+
+    return `
+      <section class="arena-lobby">
+        <div class="arena-ticker">
+          <div class="arena-ticker-track">
+            <span>🥊 FIGHT NIGHT &nbsp;•&nbsp; LEDERTALENT &nbsp;•&nbsp; GAMBL PÅ VINNEREN &nbsp;•&nbsp; </span>
+            <span>🥊 FIGHT NIGHT &nbsp;•&nbsp; LEDERTALENT &nbsp;•&nbsp; GAMBL PÅ VINNEREN &nbsp;•&nbsp; </span>
+          </div>
+        </div>
+        <h2 class="arena-heading">Kampene starter snart</h2>
+        <p class="arena-sub">Fire ledertyper. To kamper. Gjør deg klar til å tippe.</p>
+        <div class="arena-grid">${tiles}</div>
       </section>
     `;
   }

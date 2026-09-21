@@ -45,16 +45,35 @@
     `;
   }
 
+  const LOBBY_FIGHTERS = [
+    { name: 'Rita Relator', photo: 'images/rita_photo.png', color: '#f6b9e2' },
+    { name: 'Morten Motivator', photo: 'images/morten_photo.png', color: '#f6dd90' },
+    { name: 'Petra Processor', photo: 'images/petra_photo.png', color: '#9db6ce' },
+    { name: 'Pål Producer', photo: 'images/pal_photo.png', color: '#a8c29e' },
+  ];
+
   function renderLobby(state) {
+    const tiles = LOBBY_FIGHTERS.map((f, i) => `
+      <div class="skjerm-arena-fighter" style="animation-delay:${(i * 0.15).toFixed(2)}s">
+        <div class="skjerm-arena-photo-wrap">
+          <div class="skjerm-arena-glow" style="background:${f.color}; animation-delay:${(i * 0.3).toFixed(2)}s"></div>
+          <div class="skjerm-arena-frame" style="border-color:${f.color}; animation-delay:${(i * 0.4).toFixed(2)}s">
+            <img src="${f.photo}" alt="${esc(f.name)}" />
+          </div>
+        </div>
+        <p class="skjerm-arena-name" style="color:${f.color}">${esc(f.name)}</p>
+      </div>
+    `).join('');
+
     return `
       ${renderHeader()}
-      <p class="skjerm-tagline">Fire ledertyper. To kamper. Gambl på vinneren! 🥊</p>
-      <div class="skjerm-fighter-grid">
-        <div class="skjerm-fighter-tile"><img src="images/rita_card.png" alt="Rita Relator" /><p class="skjerm-fighter-type" style="color:#f6b9e2">Relasjoner og stemning</p></div>
-        <div class="skjerm-fighter-tile"><img src="images/morten_card.png" alt="Morten Motivator" /><p class="skjerm-fighter-type" style="color:#f6dd90">Energi og engasjement</p></div>
-        <div class="skjerm-fighter-tile"><img src="images/petra_card.png" alt="Petra Processor" /><p class="skjerm-fighter-type" style="color:#9db6ce">Fakta og metode</p></div>
-        <div class="skjerm-fighter-tile"><img src="images/pal_card.png" alt="Pål Producer" /><p class="skjerm-fighter-type" style="color:#a8c29e">Mål og resultat</p></div>
+      <div class="skjerm-ticker">
+        <div class="skjerm-ticker-track">
+          <span>🥊 FIGHT NIGHT &nbsp;•&nbsp; LEDERTALENT &nbsp;•&nbsp; GAMBL PÅ VINNEREN &nbsp;•&nbsp; </span>
+          <span>🥊 FIGHT NIGHT &nbsp;•&nbsp; LEDERTALENT &nbsp;•&nbsp; GAMBL PÅ VINNEREN &nbsp;•&nbsp; </span>
+        </div>
       </div>
+      <div class="skjerm-arena-grid">${tiles}</div>
       <p class="skjerm-join">Bli med og tipp på <strong>${esc(JOIN_URL)}</strong></p>
       <p class="skjerm-count">${state.registeredCount} har blitt med så langt</p>
     `;
