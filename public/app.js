@@ -188,8 +188,11 @@
     const sections = [];
 
     if (!state.registered) {
-      sections.push(renderRegisterCard());
-      APP.innerHTML = sections.join('');
+      // Don't clobber the input while someone is mid-registration: re-render
+      // only if the register card isn't already on screen.
+      if (!document.getElementById('name-input')) {
+        APP.innerHTML = renderRegisterCard();
+      }
       return;
     }
 
