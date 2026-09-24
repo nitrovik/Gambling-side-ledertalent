@@ -8,12 +8,11 @@
     { id: 'toppliste', label: 'Toppliste' },
   ];
   const QUICK_STAKES_KR = [50, 100, 250];
-  const OUTCOME_ICONS = { pending: '⏳', won: '✅', lost: '❌', void: '↩️' };
+  const OUTCOME_ICONS = { pending: '⏳', won: '✅', lost: '❌' };
   const BET_STATUS = {
     open: 'Aktiv',
     won: 'Vunnet',
     lost: 'Tapt',
-    void: 'Annullert – innsatsen tilbake',
   };
 
   function newId() {
@@ -146,12 +145,17 @@
     };
   }
 
+  // Mirrors the server: one pick per market, and no two picks in the same match
+  // that say the same thing (the method decides the winner, and a KO/TKO always
+  // lands in round 3, so it decides that round too).
   function sameMatchClash(existingKey, key) {
-    const [matchId, market] = key.split(':');
-    const [otherMatch, otherMarket] = existingKey.split(':');
+    const [matchId, market, , method] = key.split(':');
+    const [otherMatch, otherMarket, , otherMethod] = existingKey.split(':');
     if (otherMatch !== matchId) return false;
     if (otherMarket === market) return true;
-    return (market === 'winner' && otherMarket === 'method') || (market === 'method' && otherMarket === 'winner');
+    const pair = [market, otherMarket].sort().join('+');
+    if (pair === 'method+winner') return true;
+    return pair === 'method+r3' && (method || otherMethod) !== 'POENG';
   }
 
   function toggleSelection(key) {
@@ -162,10 +166,14 @@
       const market = key.split(':')[1];
       const replaced = slip.keys.filter((k) => sameMatchClash(k, key));
       slip.keys = slip.keys.filter((k) => !sameMatchClash(k, key)).concat(key);
-      if (replaced.some((k) => k.split(':')[1] !== market)) {
+      const otherMarkets = replaced.map((k) => k.split(':')[1]).filter((m) => m !== market);
+      if (otherMarkets.length) {
+        const roundClash = market === 'r3' || otherMarkets.includes('r3');
         slip.notice = {
           type: 'info',
-          text: 'Kampvinner og vinnermetode i samme kamp kan ikke kombineres – det forrige valget ble byttet ut.',
+          text: roundClash
+            ? 'KO og TKO skjer alltid i runde 3, så de kan ikke kombineres med rundevinner i runde 3 – det forrige valget ble byttet ut.'
+            : 'Kampvinner og vinnermetode i samme kamp kan ikke kombineres – det forrige valget ble byttet ut.',
         };
       }
     }
@@ -370,7 +378,6 @@
     const parts = [];
     if (summary.won) parts.push(`${summary.won} vunnet`);
     if (summary.lost) parts.push(`${summary.lost} tapt`);
-    if (summary.void) parts.push(`${summary.void} annullert`);
     if (summary.open) parts.push(`${summary.open} venter på neste kamp`);
     const paid = summary.payoutOre ? ` – ${formatKr(summary.payoutOre)} utbetalt` : '';
     let cls = 'neutral';
@@ -381,16 +388,14 @@
 
   function howItEnded(result) {
     if (result.method === 'POENG') return 'Seier på poeng etter 3 runder';
-    return `${result.methodLabel} i runde ${result.endRound}`;
+    return `${result.methodLabel} i runde 3`;
   }
 
   function roundChips(result) {
     return `
       <div class="round-chips">
         ${result.rounds.map((r) => `
-          <span class="round-chip ${r.winner ? '' : 'void'}" ${r.winner ? `style="border-color:${r.winner.color}"` : ''}>
-            R${r.round}: ${r.winner ? esc(r.winner.name.split(' ')[0]) : 'Ikke gått'}
-          </span>
+          <span class="round-chip" style="border-color:${r.winner.color}">R${r.round}: ${esc(r.winner.name.split(' ')[0])}</span>
         `).join('')}
       </div>
     `;
@@ -586,7 +591,6 @@
   }
 
   function renderBet(bet) {
-    const effectiveOdds = bet.status === 'won' || bet.status === 'void' ? bet.payoutOre / bet.stakeOre : bet.totalOdds;
     return `
       <article class="bet-card status-${bet.status}">
         <div class="bet-head">
@@ -598,13 +602,13 @@
             <li class="outcome-${sel.outcome}">
               <span class="bet-icon">${OUTCOME_ICONS[sel.outcome]}</span>
               <span class="bet-label"><small>${esc(sel.matchTitle)} · ${esc(sel.marketLabel)}</small>${esc(sel.label)}</span>
-              <span class="bet-odds">${sel.outcome === 'void' ? '1,00' : formatOdds(sel.odds)}</span>
+              <span class="bet-odds">${formatOdds(sel.odds)}</span>
             </li>
           `).join('')}
         </ul>
         <div class="bet-foot">
           <span>Innsats<strong>${formatKr(bet.stakeOre)}</strong></span>
-          <span>Odds<strong>${formatOdds(effectiveOdds)}</strong></span>
+          <span>Odds<strong>${formatOdds(bet.totalOdds)}</strong></span>
           <span>${bet.status === 'open' ? 'Mulig gevinst' : 'Utbetalt'}<strong>${formatKr(bet.status === 'open' ? bet.potentialPayoutOre : bet.payoutOre)}</strong></span>
         </div>
       </article>

@@ -213,6 +213,7 @@
   grid-template-columns: repeat(3, 1fr);
   gap: 12px;
 }
+.form-grid.two { grid-template-columns: 1fr 1fr; margin-top: 12px; }
 @media (max-width: 520px) {
   .form-grid { grid-template-columns: 1fr 1fr; }
 }

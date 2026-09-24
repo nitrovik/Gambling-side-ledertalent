@@ -60,8 +60,8 @@ function balanceKr(state, voterId) {
   return walletOf(state, voterId).balanceOre / 100;
 }
 
-const RITA_WINS_KO_R3 = { winner: 'rita', method: 'KO', endRound: 3, roundWinners: rounds('rita', 'pal', 'rita') };
-const RITA_ON_POINTS = { winner: 'rita', method: 'POENG', endRound: 3, roundWinners: rounds('rita', 'pal', 'rita') };
+const RITA_WINS_KO_R3 = { winner: 'rita', method: 'KO', roundWinners: rounds('rita', 'pal', 'rita') };
+const RITA_ON_POINTS = { winner: 'rita', method: 'POENG', roundWinners: rounds('rita', 'pal', 'pal') };
 
 describe('oddsberegning', () => {
   it('jevn kamp gir 1.87 på kampvinner/runder og 3.75/6.25/9.50 på metode for begge', () => {
@@ -165,6 +165,9 @@ describe('kombinasjonsbonger og motstridende valg', () => {
       ['match1:winner:rita', 'match1:r1:pal', 'match1:r2:rita', 'match1:r3:rita'],
       ['match1:method:pal:KO', 'match1:r1:rita'],
       ['match1:method:rita:TKO', 'match2:method:morten:POENG'],
+      ['match1:method:rita:KO', 'match1:r1:rita', 'match1:r2:rita'],
+      ['match1:method:rita:POENG', 'match1:r3:pal'],
+      ['match1:method:rita:KO', 'match2:r3:petra'],
     ].forEach((keys) => assert.equal(findConflict(parse(keys)), null, keys.join(' + ')));
   });
 
@@ -178,6 +181,8 @@ describe('kombinasjonsbonger og motstridende valg', () => {
       [['match1:method:pal:KO', 'match1:winner:rita'], /motsier/],
       [['match1:winner:rita', 'match1:method:rita:KO'], /inkluderer/],
       [['match1:r1:rita', 'match1:r1:rita'], /én gang/],
+      [['match1:method:rita:KO', 'match1:r3:rita'], /inkluderer allerede rundevinneren/],
+      [['match1:r3:pal', 'match1:method:rita:TKO'], /motsier/],
     ];
     cases.forEach(([keys, pattern]) => assert.match(findConflict(parse(keys)), pattern, keys.join(' + ')));
   });
@@ -357,7 +362,7 @@ describe('avgjøring', () => {
     assert.equal(waiting.status, 'open');
     assert.deepEqual(waiting.outcomes, ['won', 'pending']);
     assert.equal(busted.status, 'lost');
-    setResult(state, 'match2', { winner: 'petra', method: 'POENG', endRound: 3, roundWinners: rounds('petra', 'petra', 'morten') });
+    setResult(state, 'match2', { winner: 'petra', method: 'POENG', roundWinners: rounds('petra', 'petra', 'morten') });
     assert.equal(waiting.status, 'won');
     assert.equal(waiting.payoutOre, payoutFor(10000, 1.87 * 1.87));
   });
@@ -384,7 +389,7 @@ describe('avgjøring', () => {
     assert.equal(balanceKr(state, 'v2'), 1900);
 
     const correction = setResult(state, 'match1', {
-      winner: 'pal', method: 'TKO', endRound: 2, roundWinners: rounds('rita', 'pal'),
+      winner: 'pal', method: 'TKO', roundWinners: rounds('rita', 'pal', 'pal'),
     });
     assert.equal(correction.changed, 2);
     assert.equal(balanceKr(state, 'v1'), 1900);
@@ -407,57 +412,49 @@ describe('avgjøring', () => {
   });
 });
 
-describe('annullering når kampen stoppes før runde 3', () => {
-  const KO_ROUND_1 = { winner: 'pal', method: 'KO', endRound: 1, roundWinners: rounds('pal') };
-
-  it('singelbonger på runder som ikke ble gått får innsatsen tilbake', () => {
+describe('resultat: kampen går alltid tre runder', () => {
+  it('alle rundebonger avgjøres – ingen runder blir annullert', () => {
     const state = newState();
-    const r1 = place(state, 'v1', ['match1:r1:pal'], 100);
+    const r1 = place(state, 'v1', ['match1:r1:rita'], 100);
     const r2 = place(state, 'v1', ['match1:r2:rita'], 100);
-    const r3 = place(state, 'v1', ['match1:r3:pal'], 100);
-    setResult(state, 'match1', KO_ROUND_1);
-    assert.equal(r1.status, 'won');
-    assert.equal(r2.status, 'void');
-    assert.equal(r2.payoutOre, 10000);
-    assert.equal(r3.status, 'void');
-    assert.equal(r3.payoutOre, 10000);
-    assert.equal(balanceKr(state, 'v1'), 2000 - 300 + 187 + 100 + 100);
+    const r3 = place(state, 'v1', ['match1:r3:rita'], 100);
+    const combo = place(state, 'v2', ['match1:r1:rita', 'match1:r2:pal', 'match1:r3:rita'], 10);
+    setResult(state, 'match1', RITA_WINS_KO_R3);
+    assert.deepEqual([r1.status, r2.status, r3.status], ['won', 'lost', 'won']);
+    assert.equal(balanceKr(state, 'v1'), 2000 - 300 + 187 + 187);
+    assert.equal(combo.status, 'won');
+    assert.equal(combo.payoutOre, payoutFor(1000, 1.87 * 1.87 * 1.87));
   });
 
-  it('i kombinasjonsbong settes det annullerte valget til odds 1.00', () => {
-    const state = newState();
-    const bet = place(state, 'v1', ['match1:winner:pal', 'match1:r1:pal', 'match1:r3:rita'], 100);
-    setResult(state, 'match1', KO_ROUND_1);
-    assert.deepEqual(bet.outcomes, ['won', 'won', 'void']);
-    assert.equal(bet.status, 'won');
-    assert.equal(bet.payoutOre, payoutFor(10000, 1.87 * 1.87));
+  it('KO og TKO skjer i runde 3, så kampvinneren må også ha vunnet runde 3', () => {
+    const match = MATCHES[0];
+    ['KO', 'TKO'].forEach((method) => {
+      assert.throws(
+        () => normalizeResult(match, { winner: 'rita', method, roundWinners: rounds('rita', 'rita', 'pal') }),
+        /runde 3/,
+      );
+    });
+    const points = normalizeResult(match, { winner: 'rita', method: 'POENG', roundWinners: rounds('rita', 'rita', 'pal') });
+    assert.equal(points.roundWinners[3], 'pal');
   });
 
-  it('kombinasjonsbong med bare annullerte valg får innsatsen tilbake', () => {
+  it('KO/TKO og rundevinner i runde 3 i samme kamp kan ikke stå på samme bong', () => {
     const state = newState();
-    const bet = place(state, 'v1', ['match1:r2:rita', 'match1:r3:pal'], 100);
-    setResult(state, 'match1', KO_ROUND_1);
-    assert.equal(bet.status, 'void');
-    assert.equal(bet.payoutOre, 10000);
-  });
-
-  it('et tapt valg taper bongen selv om andre valg annulleres', () => {
-    const state = newState();
-    const bet = place(state, 'v1', ['match1:r1:rita', 'match1:r3:pal'], 100);
-    setResult(state, 'match1', KO_ROUND_1);
-    assert.equal(bet.status, 'lost');
+    assert.throws(() => place(state, 'v1', ['match1:method:rita:KO', 'match1:r3:rita'], 100), /inkluderer/);
+    assert.throws(() => place(state, 'v1', ['match1:method:pal:TKO', 'match1:r3:rita'], 100), /motsier/);
+    assert.equal(state.bets.length, 0);
+    place(state, 'v1', ['match1:method:rita:POENG', 'match1:r3:rita'], 100);
+    assert.equal(balanceKr(state, 'v1'), 1900);
   });
 
   it('validerer resultatet', () => {
     const match = MATCHES[0];
-    assert.throws(() => normalizeResult(match, { ...RITA_ON_POINTS, endRound: 2 }), /alle tre runder/);
     assert.throws(() => normalizeResult(match, { ...RITA_ON_POINTS, winner: 'petra' }), /vant kampen/);
     assert.throws(() => normalizeResult(match, { ...RITA_ON_POINTS, method: 'DQ' }), /vinnermetode/);
-    assert.throws(() => normalizeResult(match, { ...RITA_ON_POINTS, endRound: 4 }), /runde kampen endte/);
     assert.throws(() => normalizeResult(match, { ...RITA_ON_POINTS, roundWinners: rounds('rita', 'pal') }), /runde 3/);
+    assert.throws(() => normalizeResult(match, { ...RITA_ON_POINTS, roundWinners: rounds('rita', 'petra', 'pal') }), /runde 2/);
     assert.throws(() => normalizeResult(match, undefined), /Mangler/);
-    const stopped = normalizeResult(match, { winner: 'pal', method: 'TKO', endRound: 2, roundWinners: rounds('rita', 'pal', 'rita') });
-    assert.deepEqual(stopped.roundWinners, { 1: 'rita', 2: 'pal', 3: null });
+    assert.deepEqual(normalizeResult(match, { ...RITA_WINS_KO_R3, endRound: 1 }), RITA_WINS_KO_R3);
     assert.equal(normalizeResult(match, null), null);
   });
 });
@@ -477,7 +474,7 @@ describe('korrigering etter at gevinsten er brukt', () => {
     assert.equal(wallet.debtOre, 187000);
     assert.throws(() => place(state, 'v1', ['match2:r1:petra'], 10), /saldoen/);
 
-    setResult(state, 'match2', { winner: 'petra', method: 'POENG', endRound: 3, roundWinners: rounds('petra', 'petra', 'petra') });
+    setResult(state, 'match2', { winner: 'petra', method: 'POENG', roundWinners: rounds('petra', 'petra', 'petra') });
     const after = walletOf(state, 'v1');
     assert.equal(after.debtOre, 0);
     assert.equal(after.balanceOre, 2000 * 100 - 100000 - 287000 + payoutFor(287000, 1.87));
@@ -494,9 +491,10 @@ describe('korrigering etter at gevinsten er brukt', () => {
     const allKeys = MATCHES.flatMap((m) => selectionsForMatch(m).map((s) => s.key));
     const randomResult = (match) => {
       const fighters = [match.fighterA, match.fighterB];
+      const winner = pick(fighters);
       const method = pick(['POENG', 'TKO', 'KO']);
-      const endRound = method === 'POENG' ? 3 : pick([1, 2, 3]);
-      return { winner: pick(fighters), method, endRound, roundWinners: rounds(pick(fighters), pick(fighters), pick(fighters)) };
+      const round3 = method === 'POENG' ? pick(fighters) : winner;
+      return { winner, method, roundWinners: rounds(pick(fighters), pick(fighters), round3) };
     };
 
     for (let i = 0; i < 600; i += 1) {
@@ -579,15 +577,6 @@ describe('toppliste', () => {
     const rows = buildLeaderboard(newState());
     assert.deepEqual(rows.map((r) => r.rank), [1, 1, 1]);
   });
-
-  it('annullerte bonger teller ikke i treffprosenten', () => {
-    const state = newState();
-    place(state, 'v1', ['match1:r3:rita'], 100);
-    place(state, 'v1', ['match1:r1:pal'], 100);
-    setResult(state, 'match1', { winner: 'pal', method: 'KO', endRound: 1, roundWinners: rounds('pal') });
-    const kari = buildLeaderboard(state).find((r) => r.name === 'Kari');
-    assert.equal(kari.hitRatePct, 100);
-  });
 });
 
 describe('statistikk per kamp', () => {
@@ -603,7 +592,7 @@ describe('statistikk per kamp', () => {
 
     setResult(state, 'match1', RITA_WINS_KO_R3);
     assert.deepEqual(matchSummaryFor(state, 'v1', 'match1'), {
-      bets: 1, won: 1, lost: 0, void: 0, open: 0, stakeOre: 10000, payoutOre: 18700,
+      bets: 1, won: 1, lost: 0, open: 0, stakeOre: 10000, payoutOre: 18700,
     });
     assert.equal(matchSummaryFor(state, 'v2', 'match1').lost, 1);
   });

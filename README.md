@@ -18,7 +18,7 @@ Du (presentasjonsholderen) styrer kvelden fra en egen admin-side, publikum spill
 1. **Kamp 1:** Rita Relator vs. Pål Producer
 2. **Kamp 2:** Petra Processor vs. Morten Motivator
 
-Hver kamp går over 3 runder. Resultatet registreres av admin under presentasjonen (det er ikke lenger hardkodet), så dere kan spille ut kampene slik dere vil.
+Hver kamp går alltid alle 3 runder, og vinneren avgjøres i runde 3 (på KO, TKO eller poeng). Resultatet registreres av admin under presentasjonen (det er ikke lenger hardkodet), så dere kan spille ut kampene slik dere vil.
 
 ## Spillsystemet
 
@@ -42,13 +42,13 @@ Hver kamp går over 3 runder. Resultatet registreres av admin under presentasjon
 
 **Bonger**
 - Ett valg = singel (gevinst = innsats × odds). Flere valg = kombinasjon: oddsen ganges sammen, og alle valgene må treffe.
-- Motstridende valg blokkeres på samme bong (f.eks. begge fighterne i samme marked, eller kampvinner og vinnermetode i samme kamp).
+- Motstridende eller overlappende valg blokkeres på samme bong: begge fighterne i samme marked, kampvinner og vinnermetode i samme kamp, eller KO/TKO og rundevinner i runde 3 i samme kamp (KO og TKO skjer alltid i runde 3).
 - Oddsen låses på bongen når den leveres. Endrer admin oddsen etterpå, gjelder det bare nye bonger.
 - **Låsing:** kampvinner og vinnermetode stenger når runde 1 starter. Hvert rundemarked stenger når den runden starter. Alt stenger når resultatet er registrert.
 
 **Avgjøring**
-- Admin registrerer kampvinner, metode, hvilken runde kampen endte i og vinneren av hver runde. Bongene avgjøres automatisk.
-- Stoppes kampen før runde 3 (KO/TKO), annulleres rundemarkedene for rundene som ikke ble gått. En singel får innsatsen tilbake, og i en kombinasjon teller valget som odds 1,00.
+- Admin registrerer vinneren av runde 1, 2 og 3, kampvinner og metode. Bongene avgjøres automatisk.
+- Ved KO eller TKO må kampvinneren også ha vunnet runde 3. Adminskjemaet fyller det ut automatisk.
 - Admin kan rette et feil resultat. Alle bonger avgjøres da på nytt, og ingen bong kan bli utbetalt to ganger. Hvis en deltaker allerede har brukt en gevinst som trekkes tilbake, går saldoen ikke under 0. Differansen trekkes fra neste gevinst i stedet.
 
 **Toppliste** — sortert på saldo, med avkastning i kr og %, antall bonger, treffprosent og største gevinst. Høyest saldo når leken avsluttes vinner.
@@ -72,7 +72,7 @@ Serveren starter på `http://localhost:3000`. Admin-passordet skrives ut i termi
 npm test
 ```
 
-Testene (Node sin innebygde test-runner, ingen ekstra avhengigheter) dekker oddsberegning, kombinasjonsbonger, motstridende valg, låsing, annullering, saldo, avgjøring, retting av resultat og API-et. De ligger i `test/`.
+Testene (Node sin innebygde test-runner, ingen ekstra avhengigheter) dekker oddsberegning, kombinasjonsbonger, motstridende valg, låsing, saldo, avgjøring, retting av resultat og API-et. De ligger i `test/`.
 
 ## Slik bruker du admin-panelet under presentasjonen
 
@@ -84,7 +84,7 @@ Testene (Node sin innebygde test-runner, ingen ekstra avhengigheter) dekker odds
 1. **Lobby** – publikum registrerer seg og kan allerede spille.
 2. **Kamp 1 i fokus** – storskjermen viser Rita vs. Pål og hvor pengene ligger.
 3. Trykk **Runde 1**, **Runde 2** og **Runde 3** under "Kampforløp" etter hvert som rundene starter. Det låser markedene.
-4. Fyll inn **Resultat** og trykk "Lagre resultat og avgjør bonger". Bongene avgjøres, og storskjerm og mobiler viser avsløringen automatisk.
+4. Når runde 3 er ferdig: fyll inn **Resultat** (vinner av hver runde, kampvinner og KO/TKO/poeng) og trykk "Lagre resultat og avgjør bonger". Bongene avgjøres, og storskjerm og mobiler viser avsløringen automatisk.
 5. Gjør det samme for **Kamp 2**.
 6. **Sluttresultat** – topplisten vises. Den med høyest saldo vinner.
 

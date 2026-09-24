@@ -606,11 +606,6 @@ main#app {
   border: 1px solid;
   background: var(--bg-card-2);
 }
-.round-chip.void {
-  border-color: rgba(255, 255, 255, 0.15);
-  color: var(--text-dim);
-  text-decoration: line-through;
-}
 .result-verdict {
   font-size: 15px;
   font-weight: 600;
@@ -858,17 +853,14 @@ main#app {
 .bet-card.status-open { border-left-color: var(--morten); }
 .bet-card.status-won { border-left-color: var(--success); }
 .bet-card.status-lost { border-left-color: var(--danger); opacity: 0.8; }
-.bet-card.status-void { border-left-color: var(--petra); }
 .bet-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
 .bet-type { font-size: 13px; font-weight: 700; }
 .bet-status { font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 999px; background: var(--bg-card-2); }
 .bet-status.open { color: var(--morten); }
 .bet-status.won { color: var(--success); background: rgba(111, 224, 138, 0.12); }
 .bet-status.lost { color: var(--danger); }
-.bet-status.void { color: var(--petra); }
 .bet-lines { list-style: none; margin: 10px 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
 .bet-lines li { display: grid; grid-template-columns: 22px 1fr auto; gap: 8px; align-items: center; font-size: 14px; }
-.bet-lines li.outcome-void .bet-label { text-decoration: line-through; color: var(--text-dim); }
 .bet-label { display: flex; flex-direction: column; font-weight: 600; }
 .bet-label small { font-weight: 400; font-size: 11px; color: var(--text-dim); }
 .bet-odds { font-family: 'Anton', sans-serif; font-size: 16px; }

@@ -28,7 +28,7 @@
 
   function howItEnded(result) {
     if (result.method === 'POENG') return 'Seier på poeng etter 3 runder';
-    return `${result.methodLabel} i runde ${result.endRound}`;
+    return `${result.methodLabel} i runde 3`;
   }
 
   function renderTally(match) {
@@ -133,9 +133,7 @@
       <p class="skjerm-winner-name" style="color:${result.winner.color}">${esc(result.winner.name)}</p>
       <div class="skjerm-rounds">
         ${result.rounds.map((r) => `
-          <span class="skjerm-round ${r.winner ? '' : 'void'}" ${r.winner ? `style="border-color:${r.winner.color}"` : ''}>
-            Runde ${r.round}: ${r.winner ? esc(r.winner.name.split(' ')[0]) : 'ikke gått'}
-          </span>
+          <span class="skjerm-round" style="border-color:${r.winner.color}">Runde ${r.round}: ${esc(r.winner.name.split(' ')[0])}</span>
         `).join('')}
       </div>
       ${renderTally(match)}

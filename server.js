@@ -88,12 +88,8 @@ function resultPayload(result) {
     winner: publicFighter(result.winner),
     method: result.method,
     methodLabel: betting.METHOD_SHORT[result.method],
-    endRound: result.endRound,
     summary: betting.describeResult(result, FIGHTERS),
-    rounds: betting.ROUNDS.map((n) => ({
-      round: n,
-      winner: result.roundWinners[n] ? publicFighter(result.roundWinners[n]) : null,
-    })),
+    rounds: betting.ROUNDS.map((n) => ({ round: n, winner: publicFighter(result.roundWinners[n]) })),
   };
 }
 
@@ -143,8 +139,7 @@ function createApp({ dataFile, adminPassword }) {
   }
 
   function betPayload(bet) {
-    // Voided selections count as 1.00, so the potential win shrinks with them.
-    const totalOdds = betting.effectiveOdds(bet);
+    const totalOdds = betting.combinedOdds(bet.selections.map((sel) => sel.odds));
     return {
       id: bet.id,
       placedAt: bet.placedAt,

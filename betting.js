@@ -168,6 +168,14 @@ function findConflict(selections) {
     if (winnerPick.fighter !== sel.fighter) return 'Kampvinner og vinnermetode motsier hverandre';
     return 'Vinnermetoden inkluderer allerede kampvinner – velg ett av dem';
   }
+  // A KO or TKO always happens in round 3, so it already decides who won that round.
+  for (const sel of selections) {
+    if (sel.market !== 'method' || sel.method === 'POENG') continue;
+    const roundPick = markets.get(`${sel.matchId}:r3`);
+    if (!roundPick) continue;
+    if (roundPick.fighter !== sel.fighter) return `${METHOD_SHORT[sel.method]} og rundevinner i runde 3 motsier hverandre`;
+    return `${METHOD_SHORT[sel.method]} skjer i runde 3 og inkluderer allerede rundevinneren – velg ett av dem`;
+  }
   return null;
 }
 
@@ -264,22 +272,17 @@ function normalizeResult(match, input) {
   const fighters = [match.fighterA, match.fighterB];
   if (!fighters.includes(input.winner)) throw new BetError('Velg hvem som vant kampen');
   if (!METHODS.includes(input.method)) throw new BetError('Velg vinnermetode (KO, TKO eller poeng)');
-  const endRound = Number(input.endRound);
-  if (!ROUNDS.includes(endRound)) throw new BetError('Velg hvilken runde kampen endte i');
-  if (input.method === 'POENG' && endRound !== 3) {
-    throw new BetError('Seier på poeng betyr at alle tre runder er gått – velg runde 3');
-  }
   const given = input.roundWinners || {};
   const roundWinners = {};
   ROUNDS.forEach((n) => {
-    if (n > endRound) {
-      roundWinners[n] = null;
-      return;
-    }
     if (!fighters.includes(given[n])) throw new BetError(`Velg hvem som vant runde ${n}`);
     roundWinners[n] = given[n];
   });
-  return { winner: input.winner, method: input.method, endRound, roundWinners };
+  // Every fight goes all three rounds, so a KO or TKO always lands in round 3.
+  if (input.method !== 'POENG' && roundWinners[3] !== input.winner) {
+    throw new BetError(`${METHOD_SHORT[input.method]} skjer i runde 3 – da må kampvinneren også ha vunnet runde 3`);
+  }
+  return { winner: input.winner, method: input.method, roundWinners };
 }
 
 function selectionOutcome(sel, result) {
@@ -288,14 +291,7 @@ function selectionOutcome(sel, result) {
   if (sel.market === 'method') {
     return sel.fighter === result.winner && sel.method === result.method ? 'won' : 'lost';
   }
-  const round = Number(sel.market.slice(1));
-  if (round > result.endRound) return 'void';
-  return result.roundWinners[round] === sel.fighter ? 'won' : 'lost';
-}
-
-// Combined odds where voided selections count as 1.00.
-function effectiveOdds(bet, outcomes = bet.outcomes) {
-  return combinedOdds(bet.selections.map((sel, i) => (outcomes && outcomes[i] === 'void' ? 1 : sel.odds)));
+  return result.roundWinners[Number(sel.market.slice(1))] === sel.fighter ? 'won' : 'lost';
 }
 
 function evaluateBet(bet, matchStates) {
@@ -305,8 +301,8 @@ function evaluateBet(bet, matchStates) {
   });
   if (outcomes.includes('lost')) return { status: 'lost', payoutOre: 0, outcomes };
   if (outcomes.includes('pending')) return { status: 'open', payoutOre: 0, outcomes };
-  if (outcomes.every((o) => o === 'void')) return { status: 'void', payoutOre: bet.stakeOre, outcomes };
-  return { status: 'won', payoutOre: payoutFor(bet.stakeOre, effectiveOdds(bet, outcomes)), outcomes };
+  const odds = combinedOdds(bet.selections.map((sel) => sel.odds));
+  return { status: 'won', payoutOre: payoutFor(bet.stakeOre, odds), outcomes };
 }
 
 // Recomputes every bet from the current results. Running it again with the same
@@ -374,7 +370,7 @@ function backingFor(state, match) {
 }
 
 function matchSummaryFor(state, voterId, matchId) {
-  const summary = { bets: 0, won: 0, lost: 0, void: 0, open: 0, stakeOre: 0, payoutOre: 0 };
+  const summary = { bets: 0, won: 0, lost: 0, open: 0, stakeOre: 0, payoutOre: 0 };
   state.bets.forEach((bet) => {
     if (bet.voterId !== voterId || !bet.selections.some((sel) => sel.matchId === matchId)) return;
     summary.bets += 1;
@@ -397,7 +393,7 @@ function describeSelection(sel, fighters) {
 function describeResult(result, fighters) {
   const name = fighters[result.winner] ? fighters[result.winner].name : result.winner;
   if (result.method === 'POENG') return `${name} vant på poeng etter 3 runder`;
-  return `${name} vant på ${METHOD_LABELS[result.method]} i runde ${result.endRound}`;
+  return `${name} vant på ${METHOD_LABELS[result.method]} i runde 3`;
 }
 
 module.exports = {
@@ -424,7 +420,6 @@ module.exports = {
   isMarketOpen,
   findConflict,
   combinedOdds,
-  effectiveOdds,
   payoutFor,
   walletOf,
   placeBet,

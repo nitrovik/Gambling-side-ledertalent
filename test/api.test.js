@@ -53,7 +53,7 @@ async function balance(voterId) {
   return res.body.wallet.balanceOre / 100;
 }
 
-const RITA_KO_R3 = { winner: 'rita', method: 'KO', endRound: 3, roundWinners: { 1: 'rita', 2: 'pal', 3: 'rita' } };
+const RITA_KO_R3 = { winner: 'rita', method: 'KO', roundWinners: { 1: 'rita', 2: 'pal', 3: 'rita' } };
 
 beforeEach(async () => {
   tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'fightnight-'));
@@ -162,7 +162,7 @@ describe('API: resultat, avgjøring og retting', () => {
     assert.equal(await balance(KARI), 2087);
 
     const corrected = await admin('/api/admin/matches/match1/result', {
-      result: { winner: 'pal', method: 'POENG', endRound: 3, roundWinners: { 1: 'pal', 2: 'pal', 3: 'rita' } },
+      result: { winner: 'pal', method: 'POENG', roundWinners: { 1: 'pal', 2: 'pal', 3: 'rita' } },
     });
     assert.equal(corrected.body.phase, 'match1_result');
     assert.equal(await balance(KARI), 1900);
@@ -173,45 +173,30 @@ describe('API: resultat, avgjøring og retting', () => {
     assert.equal(state.body.myMatchSummary.match1.won, 1);
   });
 
-  it('annullerer runder som ikke ble gått og betaler tilbake innsatsen', async () => {
+  it('resultatet har alltid tre runder, og KO/TKO må stemme med runde 3', async () => {
     await register(KARI, 'Kari');
     await bet(KARI, ['match1:r3:rita'], 100);
-    await bet(KARI, ['match1:r1:pal', 'match1:r2:rita'], 100);
-    await admin('/api/admin/matches/match1/result', {
-      result: { winner: 'pal', method: 'TKO', endRound: 1, roundWinners: { 1: 'pal' } },
+    const mismatch = await admin('/api/admin/matches/match1/result', {
+      result: { winner: 'pal', method: 'TKO', roundWinners: { 1: 'rita', 2: 'pal', 3: 'rita' } },
     });
+    assert.equal(mismatch.status, 400);
+    assert.match(mismatch.body.error, /runde 3/);
+
+    const saved = await admin('/api/admin/matches/match1/result', { result: RITA_KO_R3 });
+    assert.equal(saved.status, 200, JSON.stringify(saved.body));
     const state = await get(`/api/state?voterId=${KARI}`);
-    const statuses = state.body.myBets.map((b) => b.status).sort();
-    assert.deepEqual(statuses, ['void', 'won']);
-    assert.equal(await balance(KARI), 2000 - 200 + 100 + 187);
-  });
-
-  it('viser redusert mulig gevinst når en kombinasjon får et annullert valg', async () => {
-    await register(KARI, 'Kari');
-    await bet(KARI, ['match1:r3:rita', 'match2:winner:petra'], 100);
-    await admin('/api/admin/matches/match1/result', {
-      result: { winner: 'pal', method: 'KO', endRound: 2, roundWinners: { 1: 'pal', 2: 'pal' } },
-    });
-    const open = (await get(`/api/state?voterId=${KARI}`)).body.myBets[0];
-    assert.equal(open.status, 'open');
-    assert.deepEqual(open.selections.map((s) => s.outcome), ['void', 'pending']);
-    assert.equal(open.totalOdds, 1.87);
-    assert.equal(open.potentialPayoutOre, 18700);
-
-    await admin('/api/admin/matches/match2/result', {
-      result: { winner: 'petra', method: 'POENG', endRound: 3, roundWinners: { 1: 'petra', 2: 'petra', 3: 'morten' } },
-    });
-    const won = (await get(`/api/state?voterId=${KARI}`)).body.myBets[0];
-    assert.equal(won.status, 'won');
-    assert.equal(won.payoutOre, won.potentialPayoutOre);
-    assert.equal(await balance(KARI), 1900 + 187);
+    const { result } = state.body.matches.match1;
+    assert.equal(result.summary, 'Rita Relator vant på KO i runde 3');
+    assert.deepEqual(result.rounds.map((r) => r.winner.id), ['rita', 'pal', 'rita']);
+    assert.equal(state.body.myBets[0].status, 'won');
+    assert.equal(await balance(KARI), 2087);
   });
 
   it('avviser ugyldig resultat og lar admin fjerne et resultat igjen', async () => {
     await register(KARI, 'Kari');
     await bet(KARI, ['match1:winner:rita'], 100);
     const invalid = await admin('/api/admin/matches/match1/result', {
-      result: { winner: 'rita', method: 'POENG', endRound: 2, roundWinners: { 1: 'rita', 2: 'rita' } },
+      result: { winner: 'rita', method: 'POENG', roundWinners: { 1: 'rita', 2: 'rita' } },
     });
     assert.equal(invalid.status, 400);
     assert.equal((await admin('/api/admin/matches/match9/result', { result: RITA_KO_R3 })).status, 404);

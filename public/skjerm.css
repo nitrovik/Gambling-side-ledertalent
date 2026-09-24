@@ -347,8 +347,3 @@ body.skjerm-body {
   font-weight: 700;
   font-size: clamp(14px, 1.4vw, 20px);
 }
-.skjerm-round.void {
-  border-color: rgba(255, 255, 255, 0.15);
-  color: var(--text-dim);
-  text-decoration: line-through;
-}

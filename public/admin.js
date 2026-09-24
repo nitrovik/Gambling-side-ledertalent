@@ -267,24 +267,22 @@
     const fighterOptions = (selected) => `<option value="">Velg …</option>${m.fighters.map((f) => `
       <option value="${f.id}" ${selected === f.id ? 'selected' : ''}>${esc(f.name)}</option>
     `).join('')}`;
-    const endRound = r ? r.endRound : 3;
     return `
       <form data-form="result" data-match="${m.id}">
         <p class="result-current ${r ? 'set' : ''}">${r ? `✅ Registrert: ${esc(m.result.summary)}` : 'Ingen resultat registrert ennå.'}</p>
         <div class="form-grid">
-          <label class="field">Kampvinner<select name="winner">${fighterOptions(r && r.winner)}</select></label>
-          <label class="field">Metode<select name="method">
-            <option value="">Velg …</option>
-            ${METHODS.map((x) => `<option value="${x.id}" ${r && r.method === x.id ? 'selected' : ''}>${x.label}</option>`).join('')}
-          </select></label>
-          <label class="field">Kampen endte i<select name="endRound">
-            ${[3, 2, 1].map((n) => `<option value="${n}" ${endRound === n ? 'selected' : ''}>Runde ${n}</option>`).join('')}
-          </select></label>
           ${[1, 2, 3].map((n) => `
             <label class="field">Vinner runde ${n}<select name="r${n}">${fighterOptions(r && r.roundWinners[n])}</select></label>
           `).join('')}
         </div>
-        <p class="muted small">Runder etter at kampen ble stoppet annulleres – innsatsen på dem betales tilbake (odds 1,00 i kombinasjoner).</p>
+        <div class="form-grid two">
+          <label class="field">Kampvinner<select name="winner">${fighterOptions(r && r.winner)}</select></label>
+          <label class="field">Avgjort på<select name="method">
+            <option value="">Velg …</option>
+            ${METHODS.map((x) => `<option value="${x.id}" ${r && r.method === x.id ? 'selected' : ''}>${x.label}</option>`).join('')}
+          </select></label>
+        </div>
+        <p class="muted small">Kampen går alltid 3 runder og avgjøres i runde 3. Ved KO eller TKO settes vinneren av runde 3 automatisk til kampvinneren.</p>
         <div class="form-actions">
           <button class="btn" type="submit">${r ? 'Lagre rettet resultat' : 'Lagre resultat og avgjør bonger'}</button>
           ${r ? `<button class="btn danger-btn" type="button" data-action="clear-result" data-match="${m.id}">Fjern resultat</button>` : ''}
@@ -295,22 +293,12 @@
     `;
   }
 
-  function syncResultForm(form, changedField) {
-    const { winner, method, endRound } = form.elements;
-    if (method.value === 'POENG') {
-      endRound.value = '3';
-      endRound.disabled = true;
-    } else {
-      endRound.disabled = false;
-    }
-    const end = Number(endRound.value);
-    [1, 2, 3].forEach((n) => {
-      form.elements[`r${n}`].disabled = n > end;
-    });
-    const stopRound = form.elements[`r${end}`];
-    if (changedField && method.value && method.value !== 'POENG' && winner.value && !stopRound.value) {
-      stopRound.value = winner.value;
-    }
+  // A KO or TKO always lands in round 3, so the match winner also takes that round.
+  function syncResultForm(form) {
+    const { winner, method, r3 } = form.elements;
+    const finish = method.value === 'KO' || method.value === 'TKO';
+    if (finish && winner.value) r3.value = winner.value;
+    r3.disabled = finish;
   }
 
   function renderLeaderboard(rows) {
@@ -417,12 +405,11 @@
 
   function readResultForm(form) {
     const el = form.elements;
-    const endRound = Number(el.endRound.value);
     const roundWinners = {};
     [1, 2, 3].forEach((n) => {
-      if (n <= endRound) roundWinners[n] = el[`r${n}`].value;
+      roundWinners[n] = el[`r${n}`].value;
     });
-    return { winner: el.winner.value, method: el.method.value, endRound, roundWinners };
+    return { winner: el.winner.value, method: el.method.value, roundWinners };
   }
 
   APP.addEventListener('click', async (e) => {
@@ -476,7 +463,7 @@
     const winner = match.fighters.find((f) => f.id === result.winner);
     const method = METHODS.find((x) => x.id === result.method);
     const description = winner && method
-      ? `${winner.name} vant på ${result.method === 'POENG' ? 'poeng' : `${method.label} i runde ${result.endRound}`}`
+      ? `${winner.name} vant på ${result.method === 'POENG' ? 'poeng' : `${method.label} i runde 3`}`
       : 'resultatet';
     const question = match.rawResult
       ? `Rette resultatet til «${description}»? Alle bonger på kampen avgjøres på nytt.`
@@ -490,7 +477,7 @@
     if (!form) return;
     form.parentElement.dataset.dirty = '1';
     delete formMessages[`${form.dataset.form}:${form.dataset.match}`];
-    if (form.dataset.form === 'result') syncResultForm(form, e.target.name);
+    if (form.dataset.form === 'result') syncResultForm(form);
     if (form.dataset.form === 'odds' && e.target.name === 'profile' && lastData) {
       const match = lastData.matches.find((m) => m.id === form.dataset.match);
       const base = match.profileOdds[e.target.value];
