@@ -1,5 +1,5 @@
 .admin-app {
-  max-width: 560px;
+  max-width: 760px;
   margin: 0 auto;
   padding: 8px 16px 40px;
   display: flex;
@@ -89,3 +89,156 @@
 .login-form input {
   margin-bottom: 12px;
 }
+
+.admin-app input,
+.admin-app select {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: var(--bg-card-2);
+  color: var(--text);
+  font: inherit;
+  font-size: 15px;
+}
+.admin-app input:focus,
+.admin-app select:focus { outline: 2px solid var(--accent); }
+.admin-app select:disabled { opacity: 0.35; }
+
+.small { font-size: 13px; }
+.card .small { margin: 8px 0; }
+
+.stat-grid.four { grid-template-columns: repeat(4, 1fr); margin-top: 10px; }
+@media (max-width: 560px) {
+  .stat-grid.four { grid-template-columns: repeat(2, 1fr); }
+}
+.stat-grid.four .stat-box .num { font-size: 20px; }
+
+.match-admin h2 { font-size: 22px; margin-bottom: 4px; }
+.card .match-stats { margin: 0 0 6px; font-size: 13px; }
+.admin-sub {
+  margin: 18px 0 8px;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-dim);
+}
+
+.stage-buttons {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+@media (max-width: 480px) {
+  .stage-buttons { grid-template-columns: repeat(2, 1fr); }
+}
+.stage-btn {
+  padding: 12px 8px;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.1);
+  background: var(--bg-card-2);
+  color: var(--text);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.stage-btn.active {
+  border-color: var(--accent);
+  background: rgba(255,59,92,0.18);
+}
+
+.odds-details {
+  margin-top: 16px;
+  border-top: 1px solid rgba(255,255,255,0.08);
+  padding-top: 12px;
+}
+.odds-details summary {
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.odds-details[open] summary { margin-bottom: 12px; }
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-dim);
+}
+
+.odds-table,
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+  margin-top: 12px;
+}
+.odds-table th,
+.admin-table th {
+  text-align: left;
+  font-size: 12px;
+  color: var(--text-dim);
+  font-weight: 600;
+  padding: 4px 6px;
+}
+.odds-table td,
+.admin-table td {
+  padding: 5px 6px;
+  border-top: 1px solid rgba(255,255,255,0.05);
+}
+.odds-table tr.group td {
+  padding-top: 14px;
+  font-weight: 700;
+  color: var(--text);
+  border-top: none;
+}
+.odds-table .base-odds { color: var(--text-dim); }
+.odds-table .odds-input { width: 90px; padding: 6px 8px; }
+.odds-table .overridden { color: var(--morten); font-weight: 700; }
+
+.table-wrap { overflow-x: auto; }
+.admin-table td { white-space: nowrap; }
+.admin-table .up { color: var(--success); }
+.admin-table .down { color: var(--danger); }
+.warn { color: var(--morten); font-size: 12px; }
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+@media (max-width: 520px) {
+  .form-grid { grid-template-columns: 1fr 1fr; }
+}
+
+.form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+.form-actions .btn { width: auto; flex: 1 1 auto; }
+.ghost-btn {
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.18);
+  color: var(--text);
+}
+
+.card .result-current {
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--bg-card-2);
+  font-size: 14px;
+}
+.card .result-current.set { color: var(--success); font-weight: 600; }
+
+.card .form-msg { margin: 10px 0 0; font-size: 14px; font-weight: 600; }
+.card .form-msg.ok { color: var(--success); }
+.card .form-msg.error { color: var(--danger); }

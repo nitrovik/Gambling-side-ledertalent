@@ -175,6 +175,10 @@ body.skjerm-body {
   font-size: clamp(14px, 1.4vw, 20px);
   letter-spacing: 0.08em;
 }
+.skjerm-live-badge.open {
+  background: rgba(111, 224, 138, 0.14);
+  color: var(--success);
+}
 .skjerm-live-dot {
   width: 10px;
   height: 10px;
@@ -290,7 +294,7 @@ body.skjerm-body {
 }
 .skjerm-lb-row {
   display: grid;
-  grid-template-columns: 60px 1fr auto;
+  grid-template-columns: 60px 1fr auto 110px;
   align-items: center;
   gap: 16px;
   background: var(--bg-card-2);
@@ -317,4 +321,34 @@ body.skjerm-body {
   font-weight: 700;
   font-size: clamp(14px, 1.4vw, 20px);
   white-space: nowrap;
+}
+
+.skjerm-lb-name { overflow-wrap: anywhere; }
+.skjerm-lb-net {
+  font-weight: 700;
+  font-size: clamp(14px, 1.4vw, 20px);
+  text-align: right;
+  color: var(--text-dim);
+}
+.skjerm-lb-net.up { color: var(--success); }
+.skjerm-lb-net.down { color: var(--danger); }
+
+.skjerm-rounds {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.skjerm-round {
+  padding: 8px 18px;
+  border: 2px solid;
+  border-radius: 999px;
+  background: var(--bg-card-2);
+  font-weight: 700;
+  font-size: clamp(14px, 1.4vw, 20px);
+}
+.skjerm-round.void {
+  border-color: rgba(255, 255, 255, 0.15);
+  color: var(--text-dim);
+  text-decoration: line-through;
 }

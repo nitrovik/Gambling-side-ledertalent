@@ -4,6 +4,7 @@
   const JOIN_URL = window.location.origin;
 
   let lastPhase = null;
+  let lastHtml = null;
 
   function esc(str) {
     return String(str || '').replace(/[&<>"']/g, (c) => ({
@@ -16,26 +17,46 @@
     return Math.round((part / total) * 100);
   }
 
+  function formatKr(ore) {
+    const digits = ore % 100 ? 2 : 0;
+    return `${(ore / 100).toLocaleString('nb-NO', { minimumFractionDigits: digits, maximumFractionDigits: 2 })}\u00a0kr`;
+  }
+
+  function formatPct(value) {
+    return `${value > 0 ? '+' : ''}${value.toLocaleString('nb-NO', { maximumFractionDigits: 1 })}\u00a0%`;
+  }
+
+  function howItEnded(result) {
+    if (result.method === 'POENG') return 'Seier på poeng etter 3 runder';
+    return `${result.methodLabel} i runde ${result.endRound}`;
+  }
+
   function renderTally(match) {
     const a = match.fighterA;
     const b = match.fighterB;
-    const votesA = match.votes[a.id];
-    const votesB = match.votes[b.id];
-    return `
-      <div class="skjerm-tally">
-        <div class="skjerm-tally-row">
-          <span style="color:${a.color}">${esc(a.name.split(' ')[0])}</span>
-          <div class="skjerm-bar-track"><div class="skjerm-bar-fill" style="width:${pct(votesA, match.totalVotes)}%; background:${a.color}"></div></div>
-          <span>${pct(votesA, match.totalVotes)}%</span>
-        </div>
-        <div class="skjerm-tally-row">
-          <span style="color:${b.color}">${esc(b.name.split(' ')[0])}</span>
-          <div class="skjerm-bar-track"><div class="skjerm-bar-fill" style="width:${pct(votesB, match.totalVotes)}%; background:${b.color}"></div></div>
-          <span>${pct(votesB, match.totalVotes)}%</span>
-        </div>
-        <p class="skjerm-tally-total">${match.totalVotes} stemmer</p>
+    const byFighter = match.backing.byFighterOre;
+    const total = byFighter[a.id] + byFighter[b.id];
+    const row = (f) => `
+      <div class="skjerm-tally-row">
+        <span style="color:${f.color}">${esc(f.name.split(' ')[0])}</span>
+        <div class="skjerm-bar-track"><div class="skjerm-bar-fill" style="width:${pct(byFighter[f.id], total)}%; background:${f.color}"></div></div>
+        <span>${pct(byFighter[f.id], total)}%</span>
       </div>
     `;
+    return `
+      <div class="skjerm-tally">
+        ${row(a)}
+        ${row(b)}
+        <p class="skjerm-tally-total">Pengene i salen · ${formatKr(match.backing.totalStakeOre)} satset på ${match.backing.betCount} bonger</p>
+      </div>
+    `;
+  }
+
+  function stageBadge(match) {
+    if (match.stage === 'open') {
+      return '<div class="skjerm-live-badge open">SPILLET ER ÅPENT</div>';
+    }
+    return `<div class="skjerm-live-badge"><span class="skjerm-live-dot"></span> ${esc(match.stageLabel.toUpperCase())}</div>`;
   }
 
   function renderHeader() {
@@ -74,15 +95,15 @@
         </div>
       </div>
       <div class="skjerm-arena-grid">${tiles}</div>
-      <p class="skjerm-join">Bli med og tipp på <strong>${esc(JOIN_URL)}</strong></p>
+      <p class="skjerm-join">Alle får 2 000 kr å spille for – bli med på <strong>${esc(JOIN_URL)}</strong></p>
       <p class="skjerm-count">${state.registeredCount} har blitt med så langt</p>
     `;
   }
 
-  function renderMatchOpen(title, match) {
+  function renderMatchOpen(match) {
     return `
-      <p class="skjerm-eyebrow">${title}</p>
-      <div class="skjerm-live-badge"><span class="skjerm-live-dot"></span> TIPPING ÅPEN</div>
+      <p class="skjerm-eyebrow">${esc(match.title)}</p>
+      ${stageBadge(match)}
       <div class="skjerm-versus">
         <div class="skjerm-fighter">
           <img src="${match.fighterA.photo}" alt="${esc(match.fighterA.name)}" style="border-color:${match.fighterA.color}" />
@@ -97,38 +118,42 @@
         </div>
       </div>
       ${renderTally(match)}
-      <p class="skjerm-join">Tipp på <strong>${esc(JOIN_URL)}</strong></p>
+      <p class="skjerm-join">Spill på <strong>${esc(JOIN_URL)}</strong></p>
     `;
   }
 
-  function renderMatchResult(title, match) {
+  function renderMatchResult(match) {
+    const { result } = match;
     return `
-      <p class="skjerm-eyebrow">${title} — avgjort i runde ${match.decidingRound}</p>
+      <p class="skjerm-eyebrow">${esc(match.title)} — ${esc(howItEnded(result))}</p>
       <p class="skjerm-tagline">🏆 VINNER</p>
       <div class="skjerm-result">
-        <img src="${match.winner.photo}" alt="${esc(match.winner.name)}" />
+        <img src="${result.winner.photo}" alt="${esc(result.winner.name)}" />
       </div>
-      <p class="skjerm-winner-name" style="color:${match.winner.color}">${esc(match.winner.name)}</p>
+      <p class="skjerm-winner-name" style="color:${result.winner.color}">${esc(result.winner.name)}</p>
+      <div class="skjerm-rounds">
+        ${result.rounds.map((r) => `
+          <span class="skjerm-round ${r.winner ? '' : 'void'}" ${r.winner ? `style="border-color:${r.winner.color}"` : ''}>
+            Runde ${r.round}: ${r.winner ? esc(r.winner.name.split(' ')[0]) : 'ikke gått'}
+          </span>
+        `).join('')}
+      </div>
       ${renderTally(match)}
     `;
   }
 
   function renderFinal(state) {
-    if (!state.leaderboard) return `${renderHeader()}<p class="skjerm-tagline">Venter på sluttresultat...</p>`;
-    const { rows } = state.leaderboard;
-    const topScore = rows.length ? rows[0].correct : 0;
-    const list = rows.map((row, i) => {
-      const isTop = row.correct === topScore && topScore > 0;
-      return `
-        <div class="skjerm-lb-row ${isTop ? 'top' : ''}">
-          <span class="skjerm-lb-rank">${i + 1}</span>
-          <span>${esc(row.name)}</span>
-          <span class="skjerm-lb-score">${row.correct}/${row.voted} riktig</span>
-        </div>
-      `;
-    }).join('');
+    const rows = state.leaderboard;
+    const list = rows.map((row) => `
+      <div class="skjerm-lb-row ${row.rank === 1 && row.betCount ? 'top' : ''}">
+        <span class="skjerm-lb-rank">${row.rank}</span>
+        <span class="skjerm-lb-name">${esc(row.name)}</span>
+        <span class="skjerm-lb-score">${formatKr(row.balanceOre)}</span>
+        <span class="skjerm-lb-net ${row.netOre > 0 ? 'up' : row.netOre < 0 ? 'down' : ''}">${formatPct(row.netPct)}</span>
+      </div>
+    `).join('');
     return `
-      <p class="skjerm-eyebrow">🏆 Kveldens gamblere</p>
+      <p class="skjerm-eyebrow">🏆 Kveldens gamblere – høyest saldo vinner</p>
       <h1 class="skjerm-title" style="font-size:clamp(36px, 5vw, 72px)">SLUTTRESULTAT</h1>
       <div class="skjerm-leaderboard">${list || '<p>Ingen har registrert seg ennå.</p>'}</div>
     `;
@@ -144,25 +169,19 @@
       return;
     }
 
-    switch (state.phase) {
-      case 'match1_open':
-        APP.innerHTML = renderMatchOpen('KAMP 1', state.match1);
-        break;
-      case 'match1_result':
-        APP.innerHTML = renderMatchResult('KAMP 1', state.match1);
-        break;
-      case 'match2_open':
-        APP.innerHTML = renderMatchOpen('KAMP 2', state.match2);
-        break;
-      case 'match2_result':
-        APP.innerHTML = renderMatchResult('KAMP 2', state.match2);
-        break;
-      case 'final':
-        APP.innerHTML = renderFinal(state);
-        break;
-      case 'lobby':
-      default:
-        APP.innerHTML = renderLobby(state);
+    const focus = /^(match\d+)_/.exec(state.phase);
+    let html;
+    if (focus) {
+      const match = state.matches[focus[1]];
+      html = match.result ? renderMatchResult(match) : renderMatchOpen(match);
+    } else if (state.phase === 'final') {
+      html = renderFinal(state);
+    } else {
+      html = renderLobby(state);
+    }
+    if (html !== lastHtml) {
+      APP.innerHTML = html;
+      lastHtml = html;
     }
   }
 

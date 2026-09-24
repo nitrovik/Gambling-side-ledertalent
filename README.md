@@ -1,24 +1,57 @@
 # Fight Night — Ledertalent gambling-side
 
-En "gambling"-side til Ledertalent-presentasjonen. Publikum registrerer navnet sitt og tipper hvem som vinner hver UFC-kamp mellom de fire ledertypene:
+En "gambling"-side til Ledertalent-presentasjonen. Publikum registrerer navnet sitt, får **2 000 kr i fiktive penger** og spiller på UFC-kampene mellom de fire ledertypene:
 
 - 🥊 Rita Relator
 - 🥊 Morten Motivator
 - 🥊 Petra Processor
 - 🥊 Pål Producer
 
-Du (presentasjonsholderen) styrer kvelden fra en egen admin-side, publikum tipper fra mobilen sin, og en storskjerm-visning projiseres i rommet for den store, felles avsløringen.
+Du (presentasjonsholderen) styrer kvelden fra en egen admin-side, publikum spiller fra mobilen sin, og en storskjerm-visning projiseres i rommet for den store, felles avsløringen.
 
-- **Publikumsside** (`/`) — registrering + tipping. Når en kamp avgjøres, spretter det opp en full-skjerm-annonsering med vinneren og din egen fasit (riktig/feil), pluss konfetti.
-- **Storskjerm** (`/skjerm.html`) — en ren visningsside uten registrering, laget for å projiseres. Viser live tipping-fordeling, vinner-avsløringer og sluttresultatet for hele salen.
-- **Admin** (`/admin.html`) — styrer hvilken fase kvelden er i.
+- **Publikumsside** (`/`) — registrering, lommebok, odds, spillebong, "Mine bonger" og toppliste. Når en kamp avgjøres, spretter det opp en annonsering med vinneren, hvordan det gikk med bongene dine og ny saldo, pluss konfetti.
+- **Storskjerm** (`/skjerm.html`) — en ren visningsside uten registrering, laget for å projiseres. Viser hvor pengene i salen ligger, hvilken runde som pågår, vinner-avsløringer med rundevinnere og topplisten til slutt.
+- **Admin** (`/admin.html`) — styrer fasene, kampforløpet (runde for runde), odds og resultater.
 
 ## Kampoppsettet
 
-1. **Kamp 1:** Rita Relator vs. Pål Producer → **Rita Relator vinner i runde 3**
-2. **Kamp 2:** Petra Processor vs. Morten Motivator → **Petra Processor vinner i runde 3**
+1. **Kamp 1:** Rita Relator vs. Pål Producer
+2. **Kamp 2:** Petra Processor vs. Morten Motivator
 
-Resultatene ligger hardkodet i `server.js` (`MATCH_DEFS`) siden dette er en scriptet del av presentasjonen.
+Hver kamp går over 3 runder. Resultatet registreres av admin under presentasjonen (det er ikke lenger hardkodet), så dere kan spille ut kampene slik dere vil.
+
+## Spillsystemet
+
+**Lommebok**
+- Alle starter med 2 000 kr (fiktive penger). Minsteinnsats er 10 kr, og man kan aldri satse mer enn saldoen.
+- Innsatsen trekkes når bongen leveres. Gevinster kommer automatisk inn når bongene avgjøres.
+
+**Markeder per kamp**
+- Kampvinner
+- Rundevinner i runde 1, 2 og 3
+- Vinnermetode per fighter: KO, TKO eller poeng
+
+**Odds** — admin velger oddsprofil per kamp og kan overstyre enkeltodds:
+
+| Marked | Jevn kamp | Favoritt | Underdog |
+|---|---|---|---|
+| Kampvinner / rundevinner | 1,87 | 1,55 | 2,35 |
+| Vinner på poeng | 3,75 | 3,10 | 4,25 |
+| Vinner på TKO | 6,25 | 5,20 | 8,50 |
+| Vinner på KO | 9,50 | 7,80 | 13,00 |
+
+**Bonger**
+- Ett valg = singel (gevinst = innsats × odds). Flere valg = kombinasjon: oddsen ganges sammen, og alle valgene må treffe.
+- Motstridende valg blokkeres på samme bong (f.eks. begge fighterne i samme marked, eller kampvinner og vinnermetode i samme kamp).
+- Oddsen låses på bongen når den leveres. Endrer admin oddsen etterpå, gjelder det bare nye bonger.
+- **Låsing:** kampvinner og vinnermetode stenger når runde 1 starter. Hvert rundemarked stenger når den runden starter. Alt stenger når resultatet er registrert.
+
+**Avgjøring**
+- Admin registrerer kampvinner, metode, hvilken runde kampen endte i og vinneren av hver runde. Bongene avgjøres automatisk.
+- Stoppes kampen før runde 3 (KO/TKO), annulleres rundemarkedene for rundene som ikke ble gått. En singel får innsatsen tilbake, og i en kombinasjon teller valget som odds 1,00.
+- Admin kan rette et feil resultat. Alle bonger avgjøres da på nytt, og ingen bong kan bli utbetalt to ganger. Hvis en deltaker allerede har brukt en gevinst som trekkes tilbake, går saldoen ikke under 0. Differansen trekkes fra neste gevinst i stedet.
+
+**Toppliste** — sortert på saldo, med avkastning i kr og %, antall bonger, treffprosent og største gevinst. Høyest saldo når leken avsluttes vinner.
 
 ## Kom i gang
 
@@ -33,29 +66,33 @@ Serveren starter på `http://localhost:3000`. Admin-passordet skrives ut i termi
 - **Storskjerm:** `http://localhost:3000/skjerm.html`
 - **Adminpanel:** `http://localhost:3000/admin.html`
 
+### Tester
+
+```bash
+npm test
+```
+
+Testene (Node sin innebygde test-runner, ingen ekstra avhengigheter) dekker oddsberegning, kombinasjonsbonger, motstridende valg, låsing, annullering, saldo, avgjøring, retting av resultat og API-et. De ligger i `test/`.
+
 ## Slik bruker du admin-panelet under presentasjonen
 
-Åpne `/admin.html` på din egen enhet og logg inn med passordet. Der klikker du deg gjennom fasene i rekkefølge, i takt med at dere spiller ut kampene live:
+Åpne `/admin.html` på din egen enhet og logg inn med passordet.
 
-1. **Lobby** – publikum ser de fire fighterne mens de venter
-2. **Åpne Kamp 1** – tipping åpner for Rita vs. Pål
-3. **Vis resultat Kamp 1** – avslører vinneren (konfetti!) og viser hvem som tippet riktig
-4. **Åpne Kamp 2** – tipping åpner for Petra vs. Morten
-5. **Vis resultat Kamp 2** – avslører vinneren
-6. **Sluttresultat** – viser leaderboard over kveldens beste gamblere
+**Før start:** Velg oddsprofil for hver kamp under "Odds for Kamp X" (jevn kamp, eller hvem som er favoritt). Her kan du også overstyre enkeltodds.
 
-Du kan alltid gå tilbake til en tidligere fase om noe går galt, og "Nullstill alt" sletter alle påmeldte/tips om du vil kjøre en generalprøve før selve presentasjonen.
+**Under kvelden:**
+1. **Lobby** – publikum registrerer seg og kan allerede spille.
+2. **Kamp 1 i fokus** – storskjermen viser Rita vs. Pål og hvor pengene ligger.
+3. Trykk **Runde 1**, **Runde 2** og **Runde 3** under "Kampforløp" etter hvert som rundene starter. Det låser markedene.
+4. Fyll inn **Resultat** og trykk "Lagre resultat og avgjør bonger". Bongene avgjøres, og storskjerm og mobiler viser avsløringen automatisk.
+5. Gjør det samme for **Kamp 2**.
+6. **Sluttresultat** – topplisten vises. Den med høyest saldo vinner.
 
-## Slik annonserer dere hvem som tippet riktig
-
-Det skjer på to steder samtidig, begge trigges automatisk når du trykker "Vis resultat" i admin-panelet:
-
-- **På storskjermen** (`/skjerm.html`) — koble en laptop til projektoren, åpne denne siden i fullskjerm (F11) og la den stå gjennom hele presentasjonen. Den trenger ikke registrering og viser automatisk riktig fase: kampfordeling, vinner-avsløring med konfetti, og til slutt en felles leaderboard med alle navn og poengsum.
-- **På hver mobil** — i det øyeblikket du avslører resultatet, spretter det opp en full-skjerm-boks på telefonen til alle som har tippet, med vinneren og en personlig "✅ Du tippet riktig!" / "❌ Du tippet feil". Samme skjer ved sluttresultatet, da med personlig plassering. Boksen lukkes ved å trykke utenfor eller på krysset.
+Blir et resultat registrert feil, retter du det i samme skjema ("Lagre rettet resultat"). "Fjern resultat" åpner bongene igjen. "Nullstill alt" sletter alle påmeldte, bonger, odds og resultater, for eksempel etter en generalprøve.
 
 ## Slik får publikum tilgang fra mobilen
 
-Nettsiden trenger en liten server (for at alle skal se samme tipping i sanntid), så en ren statisk fil holder ikke. Enkleste løsninger:
+Nettsiden trenger en liten server (for at alle skal se samme status i sanntid), så en ren statisk fil holder ikke. Enkleste løsninger:
 
 **Alternativ A — Samme WiFi (anbefalt for et rom):**
 1. Kjør `npm start` på laptopen din, koblet til samme WiFi som publikum.
@@ -63,7 +100,7 @@ Nettsiden trenger en liten server (for at alle skal se samme tipping i sanntid),
 3. Del lenken `http://192.168.x.x:3000` med publikum (skriv den på en slide eller lag en QR-kode).
 
 **Alternativ B — Skyløsning (fungerer uansett nett):**
-Deploy appen til en gratis Node-vert som f.eks. [Render](https://render.com) eller [Railway](https://railway.app):
+Deploy appen til en Node-vert som f.eks. [Railway](https://railway.app) eller [Render](https://render.com):
 - Push dette repoet dit, sett start-kommando til `npm start`.
 - Sett miljøvariabelen `ADMIN_PASSWORD` til et eget passord.
 - Del den offentlige URL-en med publikum.
@@ -73,8 +110,12 @@ Deploy appen til en gratis Node-vert som f.eks. [Render](https://render.com) ell
 - `ADMIN_PASSWORD` (miljøvariabel) — passord for adminpanelet. Standard er `ledertalent`.
 - `PORT` (miljøvariabel) — hvilken port serveren kjører på. Standard er `3000`.
 
-Tippingen lagres i `data/state.json` slik at ingenting går tapt om serveren restarter midt i presentasjonen.
+Alt lagres i `data/state.json`, så ingenting går tapt om serveren restarter midt i presentasjonen. På Railway og lignende tjenester blir filen borte ved ny deploy, med mindre du kobler på et volum. Ikke deploy midt i leken.
 
 ## Teknisk
 
-Enkel Node.js/Express-backend (in-memory + fil-persistert state) og en vanilla HTML/CSS/JS-frontend som poller status hvert 2,5 sekund — ingen bygg-steg, ingen databaseoppsett.
+Enkel Node.js/Express-backend (fil-persistert state) og en vanilla HTML/CSS/JS-frontend som poller status hvert 2–3 sekund. Ingen bygg-steg og ingen database.
+
+- `betting.js` — all spillogikk: odds, markeder, bonger, låsing, avgjøring, lommebok og toppliste. Alle beløp lagres i hele øre. Saldoen regnes alltid ut fra bongene, så den kan ikke komme ut av synk.
+- `server.js` — API og lagring.
+- `public/` — publikumsside, storskjerm og admin.
