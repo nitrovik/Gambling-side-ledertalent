@@ -161,20 +161,16 @@ function findConflict(selections) {
     }
     markets.set(marketId, sel);
   }
+  // Picks from different markets stack freely, as long as they can all come true
+  // together. A KO or TKO always lands in round 3, so that round must match it.
   for (const sel of selections) {
     if (sel.market !== 'method') continue;
     const winnerPick = markets.get(`${sel.matchId}:winner`);
-    if (!winnerPick) continue;
-    if (winnerPick.fighter !== sel.fighter) return 'Kampvinner og vinnermetode motsier hverandre';
-    return 'Vinnermetoden inkluderer allerede kampvinner – velg ett av dem';
-  }
-  // A KO or TKO always happens in round 3, so it already decides who won that round.
-  for (const sel of selections) {
-    if (sel.market !== 'method' || sel.method === 'POENG') continue;
+    if (winnerPick && winnerPick.fighter !== sel.fighter) return 'Kampvinner og vinnermetode motsier hverandre';
     const roundPick = markets.get(`${sel.matchId}:r3`);
-    if (!roundPick) continue;
-    if (roundPick.fighter !== sel.fighter) return `${METHOD_SHORT[sel.method]} og rundevinner i runde 3 motsier hverandre`;
-    return `${METHOD_SHORT[sel.method]} skjer i runde 3 og inkluderer allerede rundevinneren – velg ett av dem`;
+    if (sel.method !== 'POENG' && roundPick && roundPick.fighter !== sel.fighter) {
+      return `${METHOD_SHORT[sel.method]} og rundevinner i runde 3 motsier hverandre`;
+    }
   }
   return null;
 }

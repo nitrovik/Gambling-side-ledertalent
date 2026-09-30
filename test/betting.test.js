@@ -168,6 +168,9 @@ describe('kombinasjonsbonger og motstridende valg', () => {
       ['match1:method:rita:KO', 'match1:r1:rita', 'match1:r2:rita'],
       ['match1:method:rita:POENG', 'match1:r3:pal'],
       ['match1:method:rita:KO', 'match2:r3:petra'],
+      ['match1:winner:rita', 'match1:method:rita:KO'],
+      ['match1:method:rita:TKO', 'match1:r3:rita'],
+      ['match1:winner:pal', 'match1:method:pal:POENG', 'match1:r1:rita', 'match1:r2:pal', 'match1:r3:rita'],
     ].forEach((keys) => assert.equal(findConflict(parse(keys)), null, keys.join(' + ')));
   });
 
@@ -179,9 +182,7 @@ describe('kombinasjonsbonger og motstridende valg', () => {
       [['match1:method:rita:KO', 'match1:method:pal:POENG'], /én måte/],
       [['match1:winner:rita', 'match1:method:pal:KO'], /motsier/],
       [['match1:method:pal:KO', 'match1:winner:rita'], /motsier/],
-      [['match1:winner:rita', 'match1:method:rita:KO'], /inkluderer/],
       [['match1:r1:rita', 'match1:r1:rita'], /én gang/],
-      [['match1:method:rita:KO', 'match1:r3:rita'], /inkluderer allerede rundevinneren/],
       [['match1:r3:pal', 'match1:method:rita:TKO'], /motsier/],
     ];
     cases.forEach(([keys, pattern]) => assert.match(findConflict(parse(keys)), pattern, keys.join(' + ')));
@@ -342,6 +343,22 @@ describe('avgjøring', () => {
     assert.equal(miss.payoutOre, 0);
   });
 
+  it('alle markeder i begge kamper kan stackes på én bong', () => {
+    const state = newState();
+    const keys = [
+      'match1:winner:rita', 'match1:method:rita:KO', 'match1:r1:rita', 'match1:r2:pal', 'match1:r3:rita',
+      'match2:winner:petra', 'match2:method:petra:POENG', 'match2:r1:petra', 'match2:r2:petra', 'match2:r3:morten',
+    ];
+    const bet = place(state, 'v1', keys, 10);
+    const odds = 1.87 * 9.5 * 1.87 ** 3 * 1.87 * 3.75 * 1.87 ** 3;
+    setResult(state, 'match1', RITA_WINS_KO_R3);
+    assert.equal(bet.status, 'open');
+    setResult(state, 'match2', { winner: 'petra', method: 'POENG', roundWinners: rounds('petra', 'petra', 'morten') });
+    assert.equal(bet.status, 'won');
+    assert.equal(bet.payoutOre, payoutFor(1000, odds));
+    assert.equal(balanceKr(state, 'v1'), 1990 + bet.payoutOre / 100);
+  });
+
   it('vinnermetode treffer bare på riktig fighter og riktig metode', () => {
     const state = newState();
     const ko = place(state, 'v1', ['match1:method:rita:KO'], 100);
@@ -438,13 +455,15 @@ describe('resultat: kampen går alltid tre runder', () => {
     assert.equal(points.roundWinners[3], 'pal');
   });
 
-  it('KO/TKO og rundevinner i runde 3 i samme kamp kan ikke stå på samme bong', () => {
+  it('KO/TKO kan stackes med runde 3 for samme fighter, men ikke for motstanderen', () => {
     const state = newState();
-    assert.throws(() => place(state, 'v1', ['match1:method:rita:KO', 'match1:r3:rita'], 100), /inkluderer/);
     assert.throws(() => place(state, 'v1', ['match1:method:pal:TKO', 'match1:r3:rita'], 100), /motsier/);
     assert.equal(state.bets.length, 0);
-    place(state, 'v1', ['match1:method:rita:POENG', 'match1:r3:rita'], 100);
-    assert.equal(balanceKr(state, 'v1'), 1900);
+    const stacked = place(state, 'v1', ['match1:method:rita:KO', 'match1:r3:rita'], 100);
+    place(state, 'v1', ['match1:method:pal:POENG', 'match1:r3:rita'], 100);
+    setResult(state, 'match1', RITA_WINS_KO_R3);
+    assert.equal(stacked.status, 'won');
+    assert.equal(stacked.payoutOre, payoutFor(10000, 9.5 * 1.87));
   });
 
   it('validerer resultatet', () => {

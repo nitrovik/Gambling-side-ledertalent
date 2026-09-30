@@ -145,14 +145,14 @@
     };
   }
 
-  // Mirrors the server: one pick per market, and no two picks in the same match
-  // that say the same thing (the method decides the winner, and a KO/TKO always
-  // lands in round 3, so it decides that round too).
+  // Mirrors the server: one pick per market, and no picks in the same match that
+  // can't all come true (a KO/TKO always lands in round 3).
   function sameMatchClash(existingKey, key) {
-    const [matchId, market, , method] = key.split(':');
-    const [otherMatch, otherMarket, , otherMethod] = existingKey.split(':');
+    const [matchId, market, fighter, method] = key.split(':');
+    const [otherMatch, otherMarket, otherFighter, otherMethod] = existingKey.split(':');
     if (otherMatch !== matchId) return false;
     if (otherMarket === market) return true;
+    if (otherFighter === fighter) return false;
     const pair = [market, otherMarket].sort().join('+');
     if (pair === 'method+winner') return true;
     return pair === 'method+r3' && (method || otherMethod) !== 'POENG';
@@ -172,8 +172,8 @@
         slip.notice = {
           type: 'info',
           text: roundClash
-            ? 'KO og TKO skjer alltid i runde 3, så de kan ikke kombineres med rundevinner i runde 3 – det forrige valget ble byttet ut.'
-            : 'Kampvinner og vinnermetode i samme kamp kan ikke kombineres – det forrige valget ble byttet ut.',
+            ? 'KO og TKO skjer i runde 3, så samme fighter må vinne runde 3 – det forrige valget ble byttet ut.'
+            : 'Kampvinner og vinnermetode må gjelde samme fighter – det forrige valget ble byttet ut.',
         };
       }
     }

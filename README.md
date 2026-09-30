@@ -42,7 +42,8 @@ Hver kamp går alltid alle 3 runder, og vinneren avgjøres i runde 3 (på KO, TK
 
 **Bonger**
 - Ett valg = singel (gevinst = innsats × odds). Flere valg = kombinasjon: oddsen ganges sammen, og alle valgene må treffe.
-- Motstridende eller overlappende valg blokkeres på samme bong: begge fighterne i samme marked, kampvinner og vinnermetode i samme kamp, eller KO/TKO og rundevinner i runde 3 i samme kamp (KO og TKO skjer alltid i runde 3).
+- Alle markeder kan stackes på samme bong, for eksempel "Rita vinner kampen" + "Rita vinner på KO" + "Runde 1, 2 og 3: Rita", i begge kampene (maks 10 valg).
+- Bare valg som ikke kan skje samtidig blokkeres: begge fighterne i samme marked, kampvinner og vinnermetode for hver sin fighter, eller KO/TKO for én fighter og runde 3 til den andre (KO og TKO skjer alltid i runde 3).
 - Oddsen låses på bongen når den leveres. Endrer admin oddsen etterpå, gjelder det bare nye bonger.
 - **Låsing:** kampvinner og vinnermetode stenger når runde 1 starter. Hvert rundemarked stenger når den runden starter. Alt stenger når resultatet er registrert.
 
