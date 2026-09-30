@@ -134,6 +134,33 @@ describe('API: låsing', () => {
     assert.equal((await admin('/api/admin/matches/match1/stage', { stage: 'r9' })).status, 400);
   });
 
+  it('når resultatet er annonsert kan ingen spille på kampen lenger – heller ikke etter retting', async () => {
+    await register(KARI, 'Kari');
+    await admin('/api/admin/phase', { phase: 'match1_open' });
+    await admin('/api/admin/matches/match1/result', { result: RITA_KO_R3 });
+    const state = await get(`/api/state?voterId=${KARI}`);
+    assert.equal(state.body.phase, 'match1_result');
+    assert.equal(state.body.matches.match1.stage, 'done');
+    assert.ok(state.body.matches.match1.markets.every((m) => !m.open));
+    for (const key of ['match1:winner:rita', 'match1:method:rita:KO', 'match1:r1:rita', 'match1:r3:rita']) {
+      assert.equal((await bet(KARI, [key], 100)).status, 400, key);
+    }
+    assert.equal((await bet(KARI, ['match2:winner:petra', 'match1:winner:rita'], 100)).status, 400);
+
+    await admin('/api/admin/matches/match1/result', { result: null });
+    assert.equal((await bet(KARI, ['match1:winner:pal'], 100)).status, 400);
+    const stage = await admin('/api/admin/matches/match1/stage', { stage: 'open' });
+    assert.equal(stage.status, 400);
+    assert.match(stage.body.error, /stengt/);
+    assert.equal((await bet(KARI, ['match1:winner:pal'], 100)).status, 400);
+
+    assert.equal((await bet(KARI, ['match2:winner:petra'], 100)).status, 200);
+    assert.equal(await balance(KARI), 1900);
+
+    assert.equal((await admin('/api/admin/matches/match1/stage', { stage: 'open', reopen: true })).status, 200);
+    assert.equal((await bet(KARI, ['match1:winner:pal'], 100)).status, 200);
+  });
+
   it('krever admin-passord', async () => {
     const res = await post('/api/admin/matches/match1/result', { result: RITA_KO_R3 });
     assert.equal(res.status, 401);

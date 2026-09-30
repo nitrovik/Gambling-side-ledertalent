@@ -56,6 +56,9 @@
     if (match.stage === 'open') {
       return '<div class="skjerm-live-badge open">SPILLET ER ÅPENT</div>';
     }
+    if (match.stage === 'done') {
+      return '<div class="skjerm-live-badge">🔒 KAMPEN ER FERDIG</div>';
+    }
     return `<div class="skjerm-live-badge"><span class="skjerm-live-dot"></span> ${esc(match.stageLabel.toUpperCase())}</div>`;
   }
 

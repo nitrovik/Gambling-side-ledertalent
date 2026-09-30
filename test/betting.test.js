@@ -17,6 +17,7 @@ const {
   walletOf,
   placeBet,
   normalizeResult,
+  recordResult,
   settleAll,
   buildLeaderboard,
   backingFor,
@@ -51,9 +52,7 @@ function rounds(r1, r2, r3) {
 }
 
 function setResult(state, matchId, input) {
-  const match = MATCHES.find((m) => m.id === matchId);
-  state.matches[matchId].result = normalizeResult(match, input);
-  return settleAll(state);
+  return recordResult(state, MATCHES.find((m) => m.id === matchId), input);
 }
 
 function balanceKr(state, voterId) {
@@ -212,6 +211,7 @@ describe('låsing', () => {
       r1: { winner: false, method: false, r1: false, r2: true, r3: true },
       r2: { winner: false, method: false, r1: false, r2: false, r3: true },
       r3: { winner: false, method: false, r1: false, r2: false, r3: false },
+      done: { winner: false, method: false, r1: false, r2: false, r3: false },
     };
     Object.entries(expectations).forEach(([stage, markets]) => {
       Object.entries(markets).forEach(([market, open]) => {
@@ -224,6 +224,25 @@ describe('låsing', () => {
     betting.MARKETS.forEach((market) => {
       assert.equal(isMarketOpen({ stage: 'open', result: RITA_WINS_KO_R3 }, market), false);
     });
+  });
+
+  it('når resultatet er lagret er kampen stengt for godt – også om resultatet rettes eller fjernes', () => {
+    const state = newState();
+    setResult(state, 'match1', RITA_WINS_KO_R3);
+    assert.equal(state.matches.match1.stage, 'done');
+    const keys = selectionsForMatch(MATCHES[0]).map((sel) => sel.key);
+    keys.forEach((key) => assert.throws(() => place(state, 'v1', [key], 100), /låst/, key));
+
+    setResult(state, 'match1', { ...RITA_ON_POINTS, winner: 'pal', roundWinners: rounds('pal', 'pal', 'pal') });
+    setResult(state, 'match1', null);
+    assert.equal(state.matches.match1.result, null);
+    assert.equal(state.matches.match1.stage, 'done');
+    keys.forEach((key) => assert.throws(() => place(state, 'v1', [key], 100), /låst/, key));
+    assert.throws(() => place(state, 'v1', ['match2:winner:petra', 'match1:winner:pal'], 100), /låst/);
+
+    place(state, 'v1', ['match2:winner:petra'], 100);
+    assert.equal(state.bets.length, 1);
+    assert.equal(balanceKr(state, 'v1'), 1900);
   });
 
   it('avviser bonger på låste markeder, men tillater senere runder', () => {
@@ -533,11 +552,9 @@ describe('korrigering etter at gevinsten er brukt', () => {
         state.matches[match.id].stage = pick(['open', 'open', 'r1', 'r2', 'r3']);
       } else if (action < 0.95) {
         const match = pick(MATCHES);
-        state.matches[match.id].result = normalizeResult(match, randomResult(match));
-        settleAll(state);
+        recordResult(state, match, randomResult(match));
       } else {
-        state.matches[pick(MATCHES).id].result = null;
-        settleAll(state);
+        recordResult(state, pick(MATCHES), null);
       }
 
       ['v1', 'v2', 'v3'].forEach((voterId) => {

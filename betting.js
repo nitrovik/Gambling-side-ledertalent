@@ -4,7 +4,8 @@
 const START_BALANCE_ORE = 200000;
 const MIN_STAKE_ORE = 1000;
 const MAX_SELECTIONS = 10;
-const STAGES = ['open', 'r1', 'r2', 'r3'];
+// 'done' is final: a match gets there when its result is saved and stays closed.
+const STAGES = ['open', 'r1', 'r2', 'r3', 'done'];
 const ROUNDS = [1, 2, 3];
 const METHODS = ['POENG', 'TKO', 'KO'];
 const MARKETS = ['winner', 'r1', 'r2', 'r3', 'method'];
@@ -22,6 +23,7 @@ const STAGE_LABELS = {
   r1: 'Runde 1 pågår',
   r2: 'Runde 2 pågår',
   r3: 'Runde 3 pågår',
+  done: 'Ferdig',
 };
 
 const METHOD_LABELS = { POENG: 'poeng', TKO: 'TKO', KO: 'KO' };
@@ -281,6 +283,16 @@ function normalizeResult(match, input) {
   return { winner: input.winner, method: input.method, roundWinners };
 }
 
+// Saving a result closes the match for betting for good. Correcting or removing
+// the result later never reopens it, because everyone has seen the outcome.
+function recordResult(state, match, input) {
+  const result = normalizeResult(match, input);
+  const matchState = state.matches[match.id];
+  matchState.result = result;
+  if (result) matchState.stage = 'done';
+  return settleAll(state);
+}
+
 function selectionOutcome(sel, result) {
   if (!result) return 'pending';
   if (sel.market === 'winner') return sel.fighter === result.winner ? 'won' : 'lost';
@@ -420,6 +432,7 @@ module.exports = {
   walletOf,
   placeBet,
   normalizeResult,
+  recordResult,
   selectionOutcome,
   evaluateBet,
   settleAll,

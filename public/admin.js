@@ -202,11 +202,9 @@
           <button class="stage-btn ${m.stage === s.id ? 'active' : ''}" data-action="stage" data-match="${m.id}" data-stage="${s.id}">${s.label}</button>
         `).join('')}
       </div>
-      <p class="muted small">
-        ${m.result
-          ? 'Resultatet er registrert – alle markeder på kampen er stengt.'
-          : 'Kampvinner og metode stenger når runde 1 starter. Hvert rundemarked stenger når den runden starter.'}
-      </p>
+      ${m.stage === 'done'
+        ? '<p class="closed-note">🔒 Kampen er avgjort og stengt for spill for godt. Å rette eller fjerne resultatet åpner den ikke igjen.</p>'
+        : '<p class="muted small">Kampvinner og metode stenger når runde 1 starter. Hvert rundemarked stenger når den runden starter. Når resultatet lagres, stenger hele kampen for godt.</p>'}
     `;
   }
 
@@ -423,7 +421,10 @@
         await loadState();
       }
       if (action === 'stage') {
-        await adminPost(`/api/admin/matches/${matchId}/stage`, { stage: btn.dataset.stage });
+        const match = lastData.matches.find((m) => m.id === matchId);
+        const reopen = match.stage === 'done';
+        if (reopen && !confirm(`${match.title} er avgjort. Vil du virkelig åpne for spill igjen? Alle som har sett resultatet kan da spille på det.`)) return;
+        await adminPost(`/api/admin/matches/${matchId}/stage`, { stage: btn.dataset.stage, reopen });
         await loadState();
       }
       if (action === 'clear-overrides') {

@@ -143,6 +143,15 @@
   font-weight: 600;
   cursor: pointer;
 }
+.card .closed-note {
+  margin: 10px 0 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(111,224,138,0.1);
+  color: var(--success);
+  font-size: 13px;
+  font-weight: 600;
+}
 .stage-btn.active {
   border-color: var(--accent);
   background: rgba(255,59,92,0.18);

@@ -180,6 +180,20 @@
     slip.clientBetId = newId();
   }
 
+  // Picks on markets that have closed since they were added (a round started or
+  // the result was announced) leave the slip, so the rest of it can still be placed.
+  function pruneLockedSelections(state) {
+    const index = selectionIndex(state);
+    const locked = slip.keys.filter((key) => !index[key] || !index[key].market.open);
+    if (!locked.length) return;
+    slip.keys = slip.keys.filter((key) => !locked.includes(key));
+    slip.clientBetId = newId();
+    slip.notice = {
+      type: 'info',
+      text: `${locked.length === 1 ? 'Ett valg' : `${locked.length} valg`} ble fjernet fra bongen fordi spillet på det er stengt.`,
+    };
+  }
+
   async function submitSlip() {
     if (!currentState || slip.submitting) return;
     const status = slipStatus(currentState);
@@ -284,7 +298,7 @@
 
   function stageBadge(match) {
     let cls = 'open';
-    if (match.result) cls = 'done';
+    if (match.result || match.stage === 'done') cls = 'done';
     else if (match.stage !== 'open') cls = 'live';
     return `<span class="stage-badge ${cls}">${cls === 'live' ? '<span class="live-dot"></span>' : ''}${esc(match.stageLabel)}</span>`;
   }
@@ -494,8 +508,9 @@
         ${stageBadge(match)}
       </div>
     `;
-    if (match.result) {
-      return `<section class="card market-card">${head}<p class="market-done">${esc(match.result.summary)}</p></section>`;
+    if (match.result || match.stage === 'done') {
+      const text = match.result ? match.result.summary : 'Kampen er ferdig – resultatet kommer straks.';
+      return `<section class="card market-card">${head}<p class="market-done">🔒 ${esc(text)}</p></section>`;
     }
     const marketBlock = (market, body) => `
       <div class="market ${market.open ? '' : 'locked'}">
@@ -658,6 +673,7 @@
     }
 
     ensureShell();
+    pruneLockedSelections(state);
     patch(document.getElementById('wallet-bar'), renderWallet(state));
     patch(document.getElementById('tabs'), renderTabs(state));
     TABS.forEach((tab) => {

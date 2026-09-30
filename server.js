@@ -64,6 +64,7 @@ function normalizeState(raw) {
     } catch (err) {
       target.result = null;
     }
+    if (target.result) target.stage = 'done';
   });
   if (!phaseError(state, raw.phase)) state.phase = raw.phase;
   betting.settleAll(state);
@@ -298,9 +299,13 @@ function createApp({ dataFile, adminPassword }) {
   app.post('/api/admin/matches/:matchId/stage', checkAdmin, (req, res) => {
     const def = findMatch(req.params.matchId);
     if (!def) return res.status(404).json({ error: 'Ukjent kamp' });
-    const { stage } = req.body || {};
+    const { stage, reopen } = req.body || {};
     if (!betting.STAGES.includes(stage)) return res.status(400).json({ error: 'Ukjent stadium' });
-    state.matches[def.id].stage = stage;
+    const matchState = state.matches[def.id];
+    if (matchState.stage === 'done' && stage !== 'done' && reopen !== true) {
+      return res.status(400).json({ error: `${def.title} er avgjort og stengt for spill` });
+    }
+    matchState.stage = stage;
     saveState();
     res.json({ ok: true, stage });
   });
@@ -316,9 +321,8 @@ function createApp({ dataFile, adminPassword }) {
   app.post('/api/admin/matches/:matchId/result', checkAdmin, handle((req, res) => {
     const def = findMatch(req.params.matchId);
     if (!def) return res.status(404).json({ error: 'Ukjent kamp' });
-    const result = betting.normalizeResult(def, (req.body || {}).result);
-    state.matches[def.id].result = result;
-    const { changed } = betting.settleAll(state);
+    const { changed } = betting.recordResult(state, def, (req.body || {}).result);
+    const { result } = state.matches[def.id];
     if (result && state.phase === `${def.id}_open`) state.phase = `${def.id}_result`;
     if (!result && phaseError(state, state.phase)) state.phase = `${def.id}_open`;
     saveState();
