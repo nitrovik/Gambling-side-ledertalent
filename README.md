@@ -9,7 +9,7 @@ En "gambling"-side til Ledertalent-presentasjonen. Publikum registrerer navnet s
 
 Du (presentasjonsholderen) styrer kvelden fra en egen admin-side, publikum spiller fra mobilen sin, og en storskjerm-visning projiseres i rommet for den store, felles avsløringen.
 
-- **Publikumsside** (`/`) — registrering, lommebok, odds, spillebong, "Mine bonger" og toppliste. Når en kamp avgjøres, spretter det opp en annonsering med vinneren, hvordan det gikk med bongene dine og ny saldo, pluss konfetti.
+- **Publikumsside** (`/`) — registrering, lommebok, odds, spillebong, "Mine bonger" og toppliste. Under "Spill" velger man kamp, og hvert marked (kampvinner, runde 1–3, vinnermetode) er en meny man trykker frem. Bongen dukker opp nederst på skjermen ved første valg, kan minimeres, og viser odds, innsats, saldo etter bong og mulig gevinst. Når en kamp avgjøres, spretter det opp en annonsering med vinneren, hvordan det gikk med bongene dine og ny saldo, pluss konfetti.
 - **Storskjerm** (`/skjerm.html`) — en ren visningsside uten registrering, laget for å projiseres. Viser hvor pengene i salen ligger, hvilken runde som pågår, vinner-avsløringer med rundevinnere og topplisten til slutt.
 - **Admin** (`/admin.html`) — styrer fasene, kampforløpet (runde for runde), odds og resultater.
 

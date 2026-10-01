@@ -8,6 +8,13 @@
     { id: 'toppliste', label: 'Toppliste' },
   ];
   const QUICK_STAKES_KR = [50, 100, 250];
+  const MARKET_MENUS = {
+    winner: { title: 'Kampvinner', hint: 'Hvem vinner kampen?' },
+    r1: { title: 'Runde 1', hint: 'Hvem vinner runde 1?' },
+    r2: { title: 'Runde 2', hint: 'Hvem vinner runde 2?' },
+    r3: { title: 'Runde 3', hint: 'Hvem vinner runde 3?' },
+    method: { title: 'Vinnermetode', hint: 'Hvem vinner – og på KO, TKO eller poeng?' },
+  };
   const OUTCOME_ICONS = { pending: '⏳', won: '✅', lost: '❌' };
   const BET_STATUS = {
     open: 'Aktiv',
@@ -33,7 +40,17 @@
   let currentState = null;
   let activeTab = 'arena';
   const slip = { keys: [], stakeText: '', clientBetId: newId(), notice: null, submitting: false };
+  let slipExpanded = true;
+  // Spill tab: which match is shown, which market menus are open, and the stage
+  // each match was in when its menus were last opened automatically.
+  let activeMatch = null;
+  let lastFocus;
+  const openMenus = new Set();
+  const menuStage = {};
   const renderedHtml = new WeakMap();
+  const BETSLIP = document.getElementById('betslip');
+  const TOAST = document.getElementById('toast');
+  let toastTimer = null;
 
   function esc(str) {
     return String(str || '').replace(/[&<>"']/g, (c) => ({
@@ -158,8 +175,29 @@
     return pair === 'method+r3' && (method || otherMethod) !== 'POENG';
   }
 
+  // After a pick, scroll just enough that the tapped odds aren't hidden behind the slip.
+  function keepAboveSlip(key) {
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      const button = document.querySelector(`[data-action="toggle-sel"][data-key="${key}"]`);
+      if (!button || BETSLIP.hidden) return;
+      // Measured from where the slip ends up, not where its slide-in animation is now.
+      const slipTop = window.innerHeight - BETSLIP.offsetHeight;
+      const gap = button.getBoundingClientRect().bottom - slipTop + 16;
+      if (gap > 0) window.scrollBy({ top: gap, behavior: 'smooth' });
+    }));
+  }
+
+  function showToast(text, type = 'info') {
+    TOAST.textContent = text;
+    TOAST.className = `toast ${type}`;
+    TOAST.hidden = false;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { TOAST.hidden = true; }, 3800);
+  }
+
   function toggleSelection(key) {
     slip.notice = null;
+    const wasEmpty = !slip.keys.length;
     if (slip.keys.includes(key)) {
       slip.keys = slip.keys.filter((k) => k !== key);
     } else {
@@ -169,14 +207,13 @@
       const otherMarkets = replaced.map((k) => k.split(':')[1]).filter((m) => m !== market);
       if (otherMarkets.length) {
         const roundClash = market === 'r3' || otherMarkets.includes('r3');
-        slip.notice = {
-          type: 'info',
-          text: roundClash
-            ? 'KO og TKO skjer i runde 3, så samme fighter må vinne runde 3 – det forrige valget ble byttet ut.'
-            : 'Kampvinner og vinnermetode må gjelde samme fighter – det forrige valget ble byttet ut.',
-        };
+        showToast(roundClash
+          ? 'KO og TKO skjer i runde 3, så samme fighter må vinne runde 3 – det forrige valget ble byttet ut.'
+          : 'Kampvinner og vinnermetode må gjelde samme fighter – det forrige valget ble byttet ut.');
       }
     }
+    // The bet slip pops up when someone starts a new slip.
+    if (wasEmpty && slip.keys.length) slipExpanded = true;
     slip.clientBetId = newId();
   }
 
@@ -188,10 +225,7 @@
     if (!locked.length) return;
     slip.keys = slip.keys.filter((key) => !locked.includes(key));
     slip.clientBetId = newId();
-    slip.notice = {
-      type: 'info',
-      text: `${locked.length === 1 ? 'Ett valg' : `${locked.length} valg`} ble fjernet fra bongen fordi spillet på det er stengt.`,
-    };
+    showToast(`${locked.length === 1 ? 'Ett valg' : `${locked.length} valg`} ble fjernet fra bongen fordi spillet på det er stengt.`);
   }
 
   async function submitSlip() {
@@ -217,7 +251,8 @@
       slip.keys = [];
       slip.stakeText = '';
       slip.clientBetId = newId();
-      slip.notice = { type: 'success', text: `Bong levert! Mulig gevinst ${formatKr(data.bet.potentialPayoutOre)} 🍀` };
+      slip.notice = null;
+      showToast(`✅ Bong levert! Mulig gevinst ${formatKr(data.bet.potentialPayoutOre)} 🍀`, 'success');
     } catch (err) {
       slip.notice = { type: 'error', text: err instanceof TypeError ? 'Nettverksfeil – prøv igjen' : err.message };
     } finally {
@@ -229,11 +264,18 @@
   function updateSlipLive() {
     if (!currentState) return;
     const status = slipStatus(currentState);
-    const payout = document.getElementById('slip-payout');
-    const error = document.getElementById('slip-error');
+    const summary = slipSummary(currentState, status);
+    const set = (id, text) => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = text;
+    };
+    set('slip-payout', summary.payout);
+    set('slip-stake-line', summary.stake);
+    set('slip-after', summary.after);
+    set('slip-error', status.error || '');
+    const after = document.getElementById('slip-after');
+    if (after) after.classList.toggle('neg', summary.short);
     const button = document.getElementById('place-bet-btn');
-    if (payout) payout.textContent = status.payoutOre !== null ? formatKr(status.payoutOre) : '–';
-    if (error) error.textContent = status.error || '';
     if (button) {
       button.disabled = !status.valid || slip.submitting;
       button.textContent = status.valid ? `Lever bong · ${formatKr(status.stakeOre)}` : 'Lever bong';
@@ -260,11 +302,7 @@
       <section class="wallet-bar" id="wallet-bar"></section>
       <nav class="tabs" id="tabs"></nav>
       <div class="tab-view" id="view-arena"></div>
-      <div class="tab-view" id="view-spill">
-        <div id="spill-markets"></div>
-        <div id="spill-dock" class="slip-dock-wrap"></div>
-        <div id="spill-slip"></div>
-      </div>
+      <div class="tab-view" id="view-spill"></div>
       <div class="tab-view" id="view-bonger"></div>
       <div class="tab-view" id="view-toppliste"></div>
     `;
@@ -382,7 +420,7 @@
           ${staticFighter(match.fighterB)}
         </div>
         ${renderBacking(match)}
-        <button class="btn focus-cta" data-action="tab" data-tab="spill">Spill på ${esc(match.title.toLowerCase())} 🎲</button>
+        <button class="btn focus-cta" data-action="tab" data-tab="spill" data-match="${match.id}">Spill på ${esc(match.title.toLowerCase())} 🎲</button>
       </section>
     `;
   }
@@ -496,15 +534,75 @@
     `;
   }
 
+  // Shows the match in focus on the big screen, and opens the first market that
+  // is still open whenever a match moves on to a new round.
+  function syncSpillView(state) {
+    const focus = focusMatchId(state.phase);
+    if (focus !== lastFocus) {
+      lastFocus = focus;
+      if (focus) activeMatch = focus;
+    }
+    if (!state.matches[activeMatch]) {
+      activeMatch = state.matchOrder.find((id) => !state.matches[id].result) || state.matchOrder[0];
+    }
+    state.matchOrder.forEach((id) => {
+      const match = state.matches[id];
+      if (menuStage[id] === match.stage) return;
+      menuStage[id] = match.stage;
+      const firstOpen = match.markets.find((market) => market.open);
+      if (firstOpen) openMenus.add(`${id}:${firstOpen.id}`);
+    });
+  }
+
+  function pickedLabel(item) {
+    const fighter = item.fighter === item.match.fighterA.id ? item.match.fighterA : item.match.fighterB;
+    const first = fighter.name.split(' ')[0];
+    return item.market.id === 'method' ? `${first} · ${item.short}` : first;
+  }
+
+  function renderMarketMenu(match, market, index) {
+    const menuId = `${match.id}:${market.id}`;
+    const info = MARKET_MENUS[market.id];
+    const isOpen = market.open && openMenus.has(menuId);
+    const picked = market.selections.map((sel) => index[sel.key]).find((item) => slip.keys.includes(item.key));
+    let status = '';
+    if (!market.open) status = '<span class="menu-locked">🔒 Stengt</span>';
+    else if (picked) status = `<span class="menu-picked" style="--fc:${picked.color}">✓ ${esc(pickedLabel(picked))}</span>`;
+    let body = '';
+    if (isOpen) {
+      const items = market.selections.map((sel) => index[sel.key]);
+      if (market.id === 'method') {
+        body = [match.fighterA, match.fighterB].map((fighter) => `
+          <div class="method-group">
+            <span class="method-fighter" style="color:${fighter.color}">${esc(fighter.name)}</span>
+            <div class="odds-row three">${items.filter((item) => item.fighter === fighter.id).map(oddsButton).join('')}</div>
+          </div>
+        `).join('');
+      } else {
+        body = `<div class="odds-row">${items.map(oddsButton).join('')}</div>`;
+      }
+    }
+    return `
+      <div class="menu ${isOpen ? 'open' : ''} ${market.open ? '' : 'locked'}">
+        <button class="menu-head" data-action="toggle-menu" data-menu="${menuId}" aria-expanded="${isOpen}" ${market.open ? '' : 'disabled'}>
+          <span class="menu-text">
+            <span class="menu-title">${info.title}</span>
+            <span class="menu-hint">${info.hint}</span>
+          </span>
+          ${status}
+          ${market.open ? '<span class="menu-chevron" aria-hidden="true"></span>' : ''}
+        </button>
+        ${isOpen ? `<div class="menu-body">${body}</div>` : ''}
+      </div>
+    `;
+  }
+
   function renderMatchMarkets(match, index) {
     const a = match.fighterA;
     const b = match.fighterB;
     const head = `
       <div class="market-head">
-        <div>
-          <p class="market-title">${esc(match.title)}</p>
-          <p class="market-matchup"><span style="color:${a.color}">${esc(a.name)}</span> vs <span style="color:${b.color}">${esc(b.name)}</span></p>
-        </div>
+        <p class="market-matchup"><span style="color:${a.color}">${esc(a.name)}</span> <span class="muted">vs</span> <span style="color:${b.color}">${esc(b.name)}</span></p>
         ${stageBadge(match)}
       </div>
     `;
@@ -512,96 +610,118 @@
       const text = match.result ? match.result.summary : 'Kampen er ferdig – resultatet kommer straks.';
       return `<section class="card market-card">${head}<p class="market-done">🔒 ${esc(text)}</p></section>`;
     }
-    const marketBlock = (market, body) => `
-      <div class="market ${market.open ? '' : 'locked'}">
-        <p class="market-label">${esc(market.label)}${market.open ? '' : ' <span class="market-lock">🔒 Stengt</span>'}</p>
-        ${body}
+    return `
+      <section class="card market-card">
+        ${head}
+        <div class="menus">${match.markets.map((market) => renderMarketMenu(match, market, index)).join('')}</div>
+      </section>
+    `;
+  }
+
+  function renderMatchSwitch(state) {
+    return `
+      <div class="match-switch">
+        ${state.matchOrder.map((id) => {
+          const match = state.matches[id];
+          const picks = slip.keys.filter((key) => key.startsWith(`${id}:`)).length;
+          const done = match.result || match.stage === 'done';
+          const sub = done ? '🔒 Ferdig' : `${match.fighterA.name.split(' ')[0]} vs ${match.fighterB.name.split(' ')[0]}`;
+          return `
+            <button class="match-switch-btn ${id === activeMatch ? 'active' : ''}" data-action="pick-match" data-match="${id}">
+              <span class="ms-title">${esc(match.title)}${picks ? `<span class="tab-badge">${picks}</span>` : ''}</span>
+              <span class="ms-sub">${esc(sub)}</span>
+            </button>
+          `;
+        }).join('')}
       </div>
     `;
-    const blocks = match.markets.map((market) => {
-      const items = market.selections.map((sel) => index[sel.key]);
-      if (market.id !== 'method') {
-        return marketBlock(market, `<div class="odds-row">${items.map(oddsButton).join('')}</div>`);
-      }
-      const group = (fighter) => `
-        <div class="method-group">
-          <span class="method-fighter" style="color:${fighter.color}">${esc(fighter.name)}</span>
-          <div class="odds-row three">${items.filter((item) => item.fighter === fighter.id).map(oddsButton).join('')}</div>
-        </div>
-      `;
-      return marketBlock(market, `${group(a)}${group(b)}`);
-    });
-    return `<section class="card market-card">${head}${blocks.join('')}</section>`;
   }
 
   function renderMarkets(state) {
     const index = selectionIndex(state);
-    const focus = focusMatchId(state.phase);
-    const ids = [...state.matchOrder].sort((x, y) => (x === focus ? -1 : y === focus ? 1 : 0));
     return `
-      <p class="spill-intro">Trykk på oddsen du tror på. Flere valg blir en kombinasjonsbong – alle må treffe, men oddsen ganges sammen.</p>
-      ${ids.map((id) => renderMatchMarkets(state.matches[id], index)).join('')}
+      ${renderMatchSwitch(state)}
+      ${renderMatchMarkets(state.matches[activeMatch], index)}
+      <p class="spill-intro">Åpne et marked og trykk på oddsen. Velger du flere, blir det en kombinasjon – oddsen ganges sammen, og alle valgene må treffe.</p>
     `;
   }
 
-  function renderDock(state) {
-    if (!slip.keys.length) return '';
-    const status = slipStatus(state);
-    return `
-      <button class="slip-dock" data-action="scroll-slip">
-        <span>🎟️ ${slip.keys.length} valg · odds ${formatOdds(status.odds)}</span>
-        <span class="slip-dock-go">Til bongen ↓</span>
-      </button>
-    `;
+  // What the slip does to the wallet, as shown in the slip's summary.
+  function slipSummary(state, status) {
+    const balanceOre = state.wallet.balanceOre;
+    const stakeOre = status.stakeOre;
+    const short = stakeOre !== null && stakeOre > balanceOre;
+    let after = formatKr(balanceOre);
+    if (short) after = 'Ikke nok saldo';
+    else if (stakeOre !== null) after = formatKr(balanceOre - stakeOre);
+    return {
+      balance: formatKr(balanceOre),
+      stake: stakeOre !== null ? `−${formatKr(stakeOre)}` : '–',
+      after,
+      short,
+      payout: status.payoutOre !== null ? formatKr(status.payoutOre) : '–',
+    };
   }
 
-  function renderSlip(state) {
-    const notice = slip.notice ? `<p class="slip-notice ${slip.notice.type}">${esc(slip.notice.text)}</p>` : '';
-    if (!slip.keys.length) {
-      return `${notice}<p class="slip-empty">Bongen er tom – trykk på en odds for å legge den til.</p>`;
-    }
+  function renderBetslip(state) {
     const index = selectionIndex(state);
     const status = slipStatus(state);
+    const summary = slipSummary(state, status);
+    const combo = status.items.length > 1;
+    let sub = combo ? `Kombinasjon · ${status.items.length} valg` : 'Singel';
+    if (!slipExpanded && status.payoutOre !== null) sub = `Mulig gevinst ${summary.payout}`;
+    const bar = `
+      <button class="betslip-bar" data-action="toggle-slip" aria-expanded="${slipExpanded}">
+        <span class="betslip-count">${status.items.length}</span>
+        <span class="betslip-name">Bongen din<small>${esc(sub)}</small></span>
+        <span class="betslip-bar-odds">Odds<strong>${formatOdds(status.odds)}</strong></span>
+        <span class="betslip-chevron" aria-label="${slipExpanded ? 'Minimer bongen' : 'Vis bongen'}"></span>
+      </button>
+    `;
+    if (!slipExpanded) return bar;
+
     const lines = slip.keys.map((key) => {
       const item = index[key];
       if (!item) return '';
       return `
-        <li class="slip-item ${item.market.open ? '' : 'locked'}">
+        <li class="slip-item">
           <div class="slip-item-text">
             <small>${esc(item.match.title)} · ${esc(item.market.label)}</small>
             <span style="color:${item.color}">${esc(item.label)}</span>
           </div>
-          <span class="slip-odds">${item.market.open ? formatOdds(item.odds) : '🔒'}</span>
+          <span class="slip-odds">${formatOdds(item.odds)}</span>
           <button class="slip-remove" data-action="remove-sel" data-key="${esc(key)}" aria-label="Fjern valget">×</button>
         </li>
       `;
     }).join('');
-    const combo = status.items.length > 1;
+    const error = status.error || (slip.notice && slip.notice.type === 'error' ? slip.notice.text : '');
     return `
-      ${notice}
-      <section class="card slip" id="bet-slip">
-        <div class="slip-head">
-          <h3>Bong <span class="slip-type">${combo ? `Kombinasjon · ${status.items.length} valg` : 'Singel'}</span></h3>
-          <button class="slip-clear" data-action="clear-slip">Tøm</button>
-        </div>
+      ${bar}
+      <div class="betslip-body">
         <ul class="slip-list">${lines}</ul>
-        <div class="slip-row"><span>${combo ? 'Samlet odds' : 'Odds'}</span><strong>${formatOdds(status.odds)}</strong></div>
         <label class="slip-stake-label" for="stake-input">Innsats</label>
         <div class="stake-field">
-          <input id="stake-input" inputmode="decimal" autocomplete="off" placeholder="Minst ${formatKr(state.limits.minStakeOre)}" value="${esc(slip.stakeText)}" />
+          <input id="stake-input" inputmode="decimal" enterkeyhint="done" autocomplete="off" placeholder="Minst ${formatKr(state.limits.minStakeOre)}" value="${esc(slip.stakeText)}" />
           <span>kr</span>
         </div>
         <div class="quick-stakes">
           ${QUICK_STAKES_KR.map((kr) => `<button data-action="quick-stake" data-kr="${kr}">${kr} kr</button>`).join('')}
           <button data-action="all-in">Alt inn</button>
         </div>
-        <div class="slip-row payout"><span>Mulig gevinst</span><strong id="slip-payout">${status.payoutOre !== null ? formatKr(status.payoutOre) : '–'}</strong></div>
-        <p class="slip-error" id="slip-error">${esc(status.error || '')}</p>
-        <button class="btn" id="place-bet-btn" data-action="place-bet" ${status.valid && !slip.submitting ? '' : 'disabled'}>
-          ${slip.submitting ? 'Leverer …' : `Lever bong${status.valid ? ` · ${formatKr(status.stakeOre)}` : ''}`}
-        </button>
-        <p class="slip-fineprint">Innsatsen trekkes fra saldoen med én gang. En levert bong kan ikke endres.</p>
-      </section>
+        <dl class="betslip-summary">
+          <div><dt>Saldo</dt><dd>${summary.balance}</dd></div>
+          <div><dt>Innsats</dt><dd id="slip-stake-line">${summary.stake}</dd></div>
+          <div class="after"><dt>Saldo etter bong</dt><dd id="slip-after" class="${summary.short ? 'neg' : ''}">${summary.after}</dd></div>
+          <div class="payout"><dt>Mulig gevinst</dt><dd id="slip-payout">${summary.payout}</dd></div>
+        </dl>
+        <p class="slip-error" id="slip-error">${esc(error)}</p>
+        <div class="betslip-actions">
+          <button class="slip-clear" data-action="clear-slip">Tøm</button>
+          <button class="btn" id="place-bet-btn" data-action="place-bet" ${status.valid && !slip.submitting ? '' : 'disabled'}>
+            ${slip.submitting ? 'Leverer …' : `Lever bong${status.valid ? ` · ${formatKr(status.stakeOre)}` : ''}`}
+          </button>
+        </div>
+      </div>
     `;
   }
 
@@ -680,9 +800,11 @@
       document.getElementById(`view-${tab.id}`).hidden = tab.id !== activeTab;
     });
     patch(document.getElementById('view-arena'), renderArena(state));
-    patch(document.getElementById('spill-markets'), renderMarkets(state));
-    patch(document.getElementById('spill-dock'), renderDock(state));
-    if (!stakeInputFocused()) patch(document.getElementById('spill-slip'), renderSlip(state));
+    syncSpillView(state);
+    patch(document.getElementById('view-spill'), renderMarkets(state));
+    BETSLIP.hidden = activeTab !== 'spill' || !slip.keys.length;
+    BETSLIP.classList.toggle('minimized', !slipExpanded);
+    if (!BETSLIP.hidden && !stakeInputFocused()) patch(BETSLIP, renderBetslip(state));
     patch(document.getElementById('view-bonger'), renderMyBets(state));
     patch(document.getElementById('view-toppliste'), renderToppliste(state));
   }
@@ -694,7 +816,7 @@
     if (tabs && window.scrollY > tabs.offsetTop) window.scrollTo(0, tabs.offsetTop);
   }
 
-  APP.addEventListener('click', async (e) => {
+  async function handleClick(e) {
     const btn = e.target.closest('[data-action]');
     if (!btn) return;
     const { action } = btn.dataset;
@@ -721,10 +843,36 @@
 
     if (!currentState || !currentState.registered) return;
 
-    if (action === 'tab') switchTab(btn.dataset.tab);
+    if (action === 'tab') {
+      if (btn.dataset.match) activeMatch = btn.dataset.match;
+      switchTab(btn.dataset.tab);
+    }
+    if (action === 'pick-match') {
+      activeMatch = btn.dataset.match;
+      render(currentState);
+    }
+    if (action === 'toggle-menu') {
+      const menuId = btn.dataset.menu;
+      if (openMenus.has(menuId)) openMenus.delete(menuId);
+      else openMenus.add(menuId);
+      render(currentState);
+    }
+    if (action === 'toggle-slip') {
+      if (stakeInputFocused()) document.activeElement.blur();
+      slipExpanded = !slipExpanded;
+      render(currentState);
+    }
     if (action === 'toggle-sel') {
+      if (stakeInputFocused()) document.activeElement.blur();
       toggleSelection(btn.dataset.key);
       render(currentState);
+      keepAboveSlip(btn.dataset.key);
+      if (!slipExpanded) {
+        // Nudge the minimised slip so people notice the odds changed.
+        BETSLIP.classList.remove('bump');
+        void BETSLIP.offsetWidth;
+        BETSLIP.classList.add('bump');
+      }
     }
     if (action === 'remove-sel') {
       slip.keys = slip.keys.filter((k) => k !== btn.dataset.key);
@@ -746,24 +894,38 @@
       slip.notice = null;
       render(currentState);
     }
-    if (action === 'scroll-slip') {
-      const target = document.getElementById('bet-slip');
-      if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
     if (action === 'place-bet') await submitSlip();
-  });
+  }
 
-  APP.addEventListener('input', (e) => {
+  APP.addEventListener('click', handleClick);
+  BETSLIP.addEventListener('click', handleClick);
+
+  BETSLIP.addEventListener('input', (e) => {
     if (e.target.id !== 'stake-input' || !currentState) return;
     slip.stakeText = e.target.value;
     slip.clientBetId = newId();
     slip.notice = null;
     updateSlipLive();
-    // The live update above already shows what renderSlip would, so record it
+    // The live update above already shows what renderBetslip would, so record it
     // as rendered – otherwise the next poll would swap out the "Lever bong"
     // button, possibly between someone's press and release.
-    renderedHtml.set(document.getElementById('spill-slip'), renderSlip(currentState));
+    renderedHtml.set(BETSLIP, renderBetslip(currentState));
   });
+
+  BETSLIP.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && e.target.id === 'stake-input') {
+      e.preventDefault();
+      e.target.blur();
+      submitSlip();
+    }
+  });
+
+  // Keep the end of the page reachable above the bet slip.
+  if (window.ResizeObserver) {
+    new ResizeObserver(() => {
+      document.documentElement.style.setProperty('--betslip-h', `${BETSLIP.hidden ? 0 : BETSLIP.offsetHeight}px`);
+    }).observe(BETSLIP);
+  }
 
   APP.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' && e.target.id === 'name-input') {
