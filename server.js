@@ -285,6 +285,8 @@ function createApp({ dataFile, adminPassword, publicUrl }) {
       paidOutOre: sum.paidOutOre + bet.payoutOre,
       openBets: sum.openBets + (bet.status === 'open' ? 1 : 0),
     }), { bets: 0, stakeOre: 0, paidOutOre: 0, openBets: 0 });
+    const stats = betting.selectionStats(state);
+    const withStats = (sel) => ({ ...sel, ...(stats[sel.key] || { betCount: 0, stakeOre: 0 }) });
 
     res.json({
       phase: state.phase,
@@ -292,18 +294,26 @@ function createApp({ dataFile, adminPassword, publicUrl }) {
       registeredCount: Object.keys(state.voters).length,
       voters: Object.values(state.voters).map((v) => v.name).sort((a, b) => a.localeCompare(b, 'nb')),
       totals,
-      matches: MATCH_DEFS.map((def) => ({
-        ...matchPayload(def),
-        fighters: [publicFighter(def.fighterA), publicFighter(def.fighterB)],
-        oddsConfig: state.matches[def.id].odds,
-        profileOdds: {
-          even: betting.baseOdds(def, { profile: 'even' }),
-          [`fav:${def.fighterA}`]: betting.baseOdds(def, { profile: 'favorite', favorite: def.fighterA }),
-          [`fav:${def.fighterB}`]: betting.baseOdds(def, { profile: 'favorite', favorite: def.fighterB }),
-        },
-        rawResult: state.matches[def.id].result,
-      })),
+      matches: MATCH_DEFS.map((def) => {
+        const payload = matchPayload(def);
+        return {
+          ...payload,
+          markets: payload.markets.map((market) => ({ ...market, selections: market.selections.map(withStats) })),
+          fighters: [publicFighter(def.fighterA), publicFighter(def.fighterB)],
+          oddsConfig: state.matches[def.id].odds,
+          profileOdds: {
+            even: betting.baseOdds(def, { profile: 'even' }),
+            [`fav:${def.fighterA}`]: betting.baseOdds(def, { profile: 'favorite', favorite: def.fighterA }),
+            [`fav:${def.fighterB}`]: betting.baseOdds(def, { profile: 'favorite', favorite: def.fighterB }),
+          },
+          rawResult: state.matches[def.id].result,
+        };
+      }),
       leaderboard: leaderboardPayload(null),
+      bets: state.bets.slice().reverse().map((bet) => ({
+        ...betPayload(bet),
+        name: state.voters[bet.voterId] ? state.voters[bet.voterId].name : 'Ukjent',
+      })),
     });
   });
 

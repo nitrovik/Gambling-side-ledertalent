@@ -79,6 +79,8 @@ Testene (Node sin innebygde test-runner, ingen ekstra avhengigheter) dekker odds
 
 Åpne `/admin.html` på din egen enhet og logg inn med passordet.
 
+**Oversikt:** Under hver kamp ser du "Hva salen har spilt på": hvert valg med antall bonger og hvor mye penger som ligger på det, og vinnervalgene markert når resultatet er inne. Under "Alle bonger" ser du hver eneste bong (hvem, valg, innsats, odds, status/gevinst), og kan søke på navn. Topplisten viser også hvor mye hver deltaker har i aktive bonger.
+
 **Før start:** Velg oddsprofil for hver kamp under "Odds for Kamp X" (jevn kamp, eller hvem som er favoritt). Her kan du også overstyre enkeltodds.
 
 **Under kvelden:**

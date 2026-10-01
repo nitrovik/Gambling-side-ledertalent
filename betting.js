@@ -377,6 +377,19 @@ function backingFor(state, match) {
   return { byFighterOre, totalStakeOre, betCount };
 }
 
+// How many bets include each selection, and how much money rides on those bets.
+function selectionStats(state) {
+  const stats = {};
+  state.bets.forEach((bet) => {
+    bet.selections.forEach((sel) => {
+      if (!stats[sel.key]) stats[sel.key] = { betCount: 0, stakeOre: 0 };
+      stats[sel.key].betCount += 1;
+      stats[sel.key].stakeOre += bet.stakeOre;
+    });
+  });
+  return stats;
+}
+
 function matchSummaryFor(state, voterId, matchId) {
   const summary = { bets: 0, won: 0, lost: 0, open: 0, stakeOre: 0, payoutOre: 0 };
   state.bets.forEach((bet) => {
@@ -438,6 +451,7 @@ module.exports = {
   settleAll,
   buildLeaderboard,
   backingFor,
+  selectionStats,
   matchSummaryFor,
   describeSelection,
   describeResult,

@@ -265,3 +265,73 @@
 }
 .card .qr-url { margin: 4px 0 0; font-weight: 700; color: var(--text); overflow-wrap: anywhere; }
 .qr-card .btn { text-decoration: none; }
+
+/* What the room has bet on, per match */
+.market-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 14px 20px;
+}
+.market-stat.wide { grid-column: 1 / -1; }
+.market-stat {
+  display: grid;
+  grid-template-columns: max-content minmax(32px, 1fr) max-content;
+  align-items: center;
+  gap: 6px 10px;
+  align-content: start;
+}
+.card .market-stat-title {
+  grid-column: 1 / -1;
+  margin: 0;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-dim);
+}
+.stat-row { display: contents; }
+.stat-label { font-size: 14px; white-space: nowrap; }
+.stat-row.won .stat-label { color: var(--success); font-weight: 700; }
+.stat-label small { color: var(--text-dim); font-weight: 400; }
+.stat-bar {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--bg-card-2);
+  overflow: hidden;
+}
+.stat-bar span { display: block; height: 100%; border-radius: 999px; }
+.stat-num { font-size: 13px; font-weight: 700; white-space: nowrap; text-align: right; line-height: 1.2; }
+.stat-num small { display: block; font-size: 11px; font-weight: 400; color: var(--text-dim); }
+
+/* All bets */
+#bet-filter { margin-bottom: 4px; }
+.bet-rows { display: flex; flex-direction: column; gap: 10px; margin-bottom: 12px; }
+.bet-row {
+  border-radius: 12px;
+  border-left: 4px solid var(--morten);
+  background: var(--bg-card-2);
+  padding: 10px 14px;
+}
+.bet-row.status-won { border-left-color: var(--success); }
+.bet-row.status-lost { border-left-color: var(--danger); }
+.bet-row-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+  font-size: 14px;
+}
+.bet-row-head .muted { font-size: 12px; }
+.bet-row-status { margin-left: auto; font-size: 13px; font-weight: 700; }
+.bet-row-status.open { color: var(--morten); }
+.bet-row-status.won { color: var(--success); }
+.bet-row-status.lost { color: var(--danger); }
+.bet-row-sels {
+  list-style: none;
+  margin: 6px 0;
+  padding: 0;
+  font-size: 13px;
+}
+.bet-row-sels li { display: flex; justify-content: space-between; gap: 12px; padding: 2px 0; }
+.bet-row-sels li span:last-child { color: var(--text-dim); white-space: nowrap; }
+.card .bet-row-foot { margin: 0; font-size: 12px; }

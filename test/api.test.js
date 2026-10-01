@@ -297,6 +297,29 @@ describe('API: lagring', () => {
   });
 });
 
+describe('API: admin-oversikt', () => {
+  it('viser alle bonger med navn, nyeste først, og hva salen har spilt på', async () => {
+    await register(KARI, 'Kari');
+    await register(OLA, 'Ola');
+    await bet(KARI, ['match1:winner:rita'], 100);
+    await bet(OLA, ['match1:winner:rita', 'match1:method:rita:KO'], 50);
+
+    const res = await call('GET', '/api/admin/state', undefined, { 'x-admin-key': ADMIN });
+    assert.equal(res.status, 200);
+    assert.deepEqual(res.body.bets.map((b) => b.name), ['Ola', 'Kari']);
+    assert.equal(res.body.bets[0].type, 'combo');
+    assert.equal(res.body.bets[0].potentialPayoutOre, Math.round(5000 * 1.87 * 9.5));
+    assert.equal(JSON.stringify(res.body.bets).includes(KARI), false);
+
+    const winner = res.body.matches[0].markets.find((m) => m.id === 'winner');
+    const rita = winner.selections.find((s) => s.fighter === 'rita');
+    const pal = winner.selections.find((s) => s.fighter === 'pal');
+    assert.deepEqual([rita.betCount, rita.stakeOre], [2, 15000]);
+    assert.deepEqual([pal.betCount, pal.stakeOre], [0, 0]);
+    assert.equal(res.body.leaderboard.find((r) => r.name === 'Kari').openStakeOre, 10000);
+  });
+});
+
 describe('API: QR-kode', () => {
   it('peker på adressen siden ble åpnet på, og respekterer HTTPS bak en proxy', async () => {
     const QRCode = require('qrcode');

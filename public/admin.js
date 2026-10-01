@@ -5,6 +5,10 @@
   let lastData = null;
   const renderedHtml = new WeakMap();
   const formMessages = {};
+  let betFilter = '';
+  let showAllBets = false;
+  const BETS_PREVIEW = 25;
+  const OUTCOME_ICONS = { pending: '⏳', won: '✅', lost: '❌' };
 
   const STAGE_BUTTONS = [
     { id: 'open', label: 'Åpent for spill' },
@@ -35,6 +39,10 @@
 
   function formatOdds(odds) {
     return odds.toFixed(2).replace('.', ',');
+  }
+
+  function formatTime(ts) {
+    return new Date(ts).toLocaleTimeString('nb-NO', { hour: '2-digit', minute: '2-digit' });
   }
 
   function pct(part, total) {
@@ -127,6 +135,8 @@
       ${data.matches.map((m) => `
         <section class="card match-admin">
           <div id="admin-${m.id}-head"></div>
+          <h3 class="admin-sub">Hva salen har spilt på</h3>
+          <div id="admin-${m.id}-stats"></div>
           <details class="odds-details">
             <summary>Odds for ${esc(m.title)}</summary>
             <div id="admin-${m.id}-odds"></div>
@@ -138,6 +148,11 @@
       <section class="card">
         <h2>Toppliste</h2>
         <div id="admin-leaderboard"></div>
+      </section>
+      <section class="card">
+        <h2>Alle bonger</h2>
+        <input id="bet-filter" type="search" placeholder="Søk på navn …" autocomplete="off" />
+        <div id="admin-bets"></div>
       </section>
       <section class="card">
         <h2>Påmeldte</h2>
@@ -314,13 +329,14 @@
     return `
       <div class="table-wrap">
         <table class="admin-table">
-          <thead><tr><th>#</th><th>Navn</th><th>Saldo</th><th>Avkastning</th><th>Bonger</th><th>Treff</th><th>Største gevinst</th></tr></thead>
+          <thead><tr><th>#</th><th>Navn</th><th>Saldo</th><th>I spill</th><th>Avkastning</th><th>Bonger</th><th>Treff</th><th>Største gevinst</th></tr></thead>
           <tbody>
             ${rows.map((row) => `
               <tr>
                 <td>${row.rank}</td>
                 <td>${esc(row.name)}${row.debtOre ? ` <span class="warn">(gjeld ${formatKr(row.debtOre)})</span>` : ''}</td>
                 <td>${formatKr(row.balanceOre)}</td>
+                <td>${row.openStakeOre ? formatKr(row.openStakeOre) : '–'}</td>
                 <td class="${row.netOre > 0 ? 'up' : row.netOre < 0 ? 'down' : ''}">${row.netOre > 0 ? '+' : ''}${formatKr(row.netOre)} (${row.netPct} %)</td>
                 <td>${row.betCount}</td>
                 <td>${row.hitRatePct === null ? '–' : `${row.hitRatePct} %`}</td>
@@ -333,6 +349,81 @@
     `;
   }
 
+  function isWinningPick(result, marketId, sel) {
+    if (!result) return false;
+    if (marketId === 'winner') return sel.fighter === result.winner;
+    if (marketId === 'method') return sel.fighter === result.winner && sel.method === result.method;
+    return result.roundWinners[marketId.slice(1)] === sel.fighter;
+  }
+
+  // Every pick in the match with how many bets include it and the money on them.
+  function renderMarketStats(m) {
+    if (!m.backing.betCount) return '<p class="muted small">Ingen har spilt på kampen ennå.</p>';
+    const fighter = (id) => m.fighters.find((f) => f.id === id);
+    return `
+      <div class="market-stats">
+        ${m.markets.map((market) => {
+          const total = market.selections.reduce((sum, sel) => sum + sel.stakeOre, 0);
+          return `
+            <div class="market-stat ${market.id === 'method' ? 'wide' : ''}">
+              <p class="market-stat-title">${esc(market.label)}${market.open ? '' : ' 🔒'}</p>
+              ${market.selections.map((sel) => {
+                const f = fighter(sel.fighter);
+                const name = market.id === 'method' ? `${f.name.split(' ')[0]} på ${sel.short}` : f.name;
+                const won = isWinningPick(m.rawResult, market.id, sel);
+                return `
+                  <div class="stat-row ${won ? 'won' : ''}">
+                    <span class="stat-label">${won ? '✅ ' : ''}${esc(name)} <small>${formatOdds(sel.odds)}</small></span>
+                    <span class="stat-bar"><span style="width:${pct(sel.stakeOre, total)}%; background:${f.color}"></span></span>
+                    <span class="stat-num">${sel.betCount
+                      ? `${formatKr(sel.stakeOre)}<small>${sel.betCount} ${sel.betCount === 1 ? 'bong' : 'bonger'}</small>`
+                      : '–'}</span>
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          `;
+        }).join('')}
+      </div>
+      <p class="muted small">Antall bonger med valget og samlet innsats på dem. En kombinasjon teller med på hvert av valgene sine.</p>
+    `;
+  }
+
+  function renderBetRow(bet) {
+    let status = '<span class="bet-row-status lost">Tapt</span>';
+    if (bet.status === 'open') status = `<span class="bet-row-status open">Aktiv · mulig ${formatKr(bet.potentialPayoutOre)}</span>`;
+    if (bet.status === 'won') status = `<span class="bet-row-status won">Vunnet ${formatKr(bet.payoutOre)}</span>`;
+    return `
+      <div class="bet-row status-${bet.status}">
+        <div class="bet-row-head">
+          <strong>${esc(bet.name)}</strong>
+          <span class="muted">${formatTime(bet.placedAt)} · ${bet.type === 'combo' ? `Kombinasjon · ${bet.selections.length} valg` : 'Singel'}</span>
+          ${status}
+        </div>
+        <ul class="bet-row-sels">
+          ${bet.selections.map((sel) => `
+            <li><span>${OUTCOME_ICONS[sel.outcome]} ${esc(sel.matchTitle)} · ${esc(sel.label)}</span><span>${formatOdds(sel.odds)}</span></li>
+          `).join('')}
+        </ul>
+        <p class="bet-row-foot">Innsats ${formatKr(bet.stakeOre)} · odds ${formatOdds(bet.totalOdds)}</p>
+      </div>
+    `;
+  }
+
+  function renderBetsList(bets) {
+    if (!bets.length) return '<p class="muted">Ingen bonger levert ennå.</p>';
+    const query = betFilter.trim().toLowerCase();
+    const matching = query ? bets.filter((bet) => bet.name.toLowerCase().includes(query)) : bets;
+    if (!matching.length) return `<p class="muted">Ingen bonger fra «${esc(betFilter.trim())}».</p>`;
+    const shown = showAllBets ? matching : matching.slice(0, BETS_PREVIEW);
+    const open = matching.filter((bet) => bet.status === 'open').length;
+    return `
+      <p class="muted small">${matching.length} bonger · ${open} aktive · nyeste først</p>
+      <div class="bet-rows">${shown.map(renderBetRow).join('')}</div>
+      ${matching.length > shown.length ? `<button class="btn ghost-btn" data-action="show-all-bets">Vis alle ${matching.length} bonger</button>` : ''}
+    `;
+  }
+
   function renderPanel(data, { forceForms = [] } = {}) {
     lastData = data;
     ensureShell(data);
@@ -340,6 +431,7 @@
     patch(byId('admin-phases'), renderPhases(data));
     data.matches.forEach((m) => {
       patch(byId(`admin-${m.id}-head`), renderMatchHead(m));
+      patch(byId(`admin-${m.id}-stats`), renderMarketStats(m));
       patch(byId(`admin-${m.id}-odds`), renderOddsForm(m), { form: true, force: forceForms.includes(`odds:${m.id}`) });
       const resultEl = byId(`admin-${m.id}-result`);
       if (patch(resultEl, renderResultForm(m), { form: true, force: forceForms.includes(`result:${m.id}`) })) {
@@ -347,6 +439,7 @@
       }
     });
     patch(byId('admin-leaderboard'), renderLeaderboard(data.leaderboard));
+    patch(byId('admin-bets'), renderBetsList(data.bets));
     patch(byId('admin-voters'), `<div class="voter-list">${data.voters.map(esc).join(', ') || 'Ingen ennå'}</div>`);
   }
 
@@ -425,6 +518,12 @@
     if (!btn || !lastData) return;
     const { action, match: matchId } = btn.dataset;
 
+    if (action === 'show-all-bets') {
+      showAllBets = true;
+      patch(byId('admin-bets'), renderBetsList(lastData.bets));
+      return;
+    }
+
     try {
       if (action === 'phase') {
         await adminPost('/api/admin/phase', { phase: btn.dataset.phase });
@@ -497,6 +596,11 @@
     }
   }
   APP.addEventListener('input', markDirty);
+  APP.addEventListener('input', (e) => {
+    if (e.target.id !== 'bet-filter' || !lastData) return;
+    betFilter = e.target.value;
+    patch(byId('admin-bets'), renderBetsList(lastData.bets));
+  });
   APP.addEventListener('change', markDirty);
 
   function startPolling() {

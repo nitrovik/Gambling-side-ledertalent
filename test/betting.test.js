@@ -21,6 +21,7 @@ const {
   settleAll,
   buildLeaderboard,
   backingFor,
+  selectionStats,
   matchSummaryFor,
   START_BALANCE_ORE,
 } = betting;
@@ -616,6 +617,19 @@ describe('toppliste', () => {
 });
 
 describe('statistikk per kamp', () => {
+  it('teller bonger og innsats per valg – kombinasjoner teller på hvert valg', () => {
+    const state = newState();
+    place(state, 'v1', ['match1:winner:rita'], 100);
+    place(state, 'v2', ['match1:winner:rita', 'match1:method:rita:KO', 'match2:r1:petra'], 50);
+    place(state, 'v3', ['match1:winner:pal'], 20);
+    const stats = selectionStats(state);
+    assert.deepEqual(stats['match1:winner:rita'], { betCount: 2, stakeOre: 15000 });
+    assert.deepEqual(stats['match1:method:rita:KO'], { betCount: 1, stakeOre: 5000 });
+    assert.deepEqual(stats['match2:r1:petra'], { betCount: 1, stakeOre: 5000 });
+    assert.deepEqual(stats['match1:winner:pal'], { betCount: 1, stakeOre: 2000 });
+    assert.equal(stats['match1:r2:pal'], undefined);
+  });
+
   it('summerer penger på hver fighter og deltakerens resultat på kampen', () => {
     const state = newState();
     place(state, 'v1', ['match1:winner:rita'], 100);
