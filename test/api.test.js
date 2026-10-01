@@ -296,3 +296,23 @@ describe('API: lagring', () => {
     assert.equal(state.body.leaderboard.length, 0);
   });
 });
+
+describe('API: QR-kode', () => {
+  it('peker på adressen siden ble åpnet på, og respekterer HTTPS bak en proxy', async () => {
+    const QRCode = require('qrcode');
+    const svg = await fetch(`${base}/qr.svg`);
+    assert.equal(svg.status, 200);
+    assert.match(svg.headers.get('content-type'), /svg/);
+    const options = { margin: 2, errorCorrectionLevel: 'M', type: 'svg' };
+    assert.equal(await svg.text(), await QRCode.toString(`${base}/`, options));
+
+    const proxied = await fetch(`${base}/qr.svg`, { headers: { 'x-forwarded-proto': 'https' } });
+    assert.equal(await proxied.text(), await QRCode.toString(`${base.replace('http:', 'https:')}/`, options));
+
+    const png = await fetch(`${base}/qr.png?download=1`);
+    assert.equal(png.status, 200);
+    assert.match(png.headers.get('content-disposition'), /fight-night-qr\.png/);
+    const bytes = Buffer.from(await png.arrayBuffer());
+    assert.deepEqual([...bytes.subarray(1, 4)], [...Buffer.from('PNG')]);
+  });
+});

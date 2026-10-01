@@ -143,6 +143,16 @@
         <h2>Påmeldte</h2>
         <div id="admin-voters"></div>
       </section>
+      <section class="card qr-card">
+        <h2>QR-kode til publikum</h2>
+        <p>Vises automatisk på storskjermen i lobbyen og mens spillet er åpent. Last den ned hvis du vil ha den på en slide.</p>
+        <img class="qr-preview" src="qr.svg" alt="QR-kode til Fight Night" />
+        <p class="qr-url">${esc(window.location.origin)}</p>
+        <div class="form-actions">
+          <a class="btn" href="qr.png?download=1">Last ned PNG</a>
+          <a class="btn ghost-btn" href="qr.svg?download=1">Last ned SVG</a>
+        </div>
+      </section>
       <section class="card">
         <h2>Faresone</h2>
         <p>Nullstiller alle påmeldte, bonger, odds og resultater. Kan ikke angres.</p>

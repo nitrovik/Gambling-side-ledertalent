@@ -160,7 +160,17 @@
     `;
   }
 
+  // The QR code sits outside the app so it never reloads or flickers on re-render.
+  // It shows while people can still join and bet.
+  function updateQr(state) {
+    const focus = /^(match\d+)_/.exec(state.phase);
+    const show = state.phase === 'lobby' || Boolean(focus && !state.matches[focus[1]].result);
+    document.getElementById('skjerm-qr').hidden = !show;
+    document.body.classList.toggle('show-qr', show);
+  }
+
   function render(state) {
+    updateQr(state);
     // The lobby fighter grid is static — re-mounting it every poll would
     // replay its entrance/idle animations from scratch. Just keep the
     // headcount fresh instead of touching the grid.

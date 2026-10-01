@@ -1,6 +1,7 @@
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
+const QRCode = require('qrcode');
 const betting = require('./betting');
 
 const FIGHTERS = {
@@ -94,8 +95,10 @@ function resultPayload(result) {
   };
 }
 
-function createApp({ dataFile, adminPassword }) {
+function createApp({ dataFile, adminPassword, publicUrl }) {
   const app = express();
+  // Railway and similar hosts terminate HTTPS in front of the app.
+  app.set('trust proxy', true);
   let state = loadState(dataFile);
 
   function saveState() {
@@ -190,6 +193,23 @@ function createApp({ dataFile, adminPassword }) {
 
   app.use(express.json());
   app.use(express.static(path.join(__dirname, 'public')));
+
+  // The QR code points at the address the page was opened on, so it is right
+  // both on Railway and on a laptop on the local WiFi. PUBLIC_URL overrides it.
+  app.get('/qr.:format(svg|png)', async (req, res) => {
+    const url = publicUrl || `${req.protocol}://${req.get('host')}/`;
+    const options = { margin: 2, errorCorrectionLevel: 'M' };
+    try {
+      const { format } = req.params;
+      const body = format === 'svg'
+        ? await QRCode.toString(url, { ...options, type: 'svg' })
+        : await QRCode.toBuffer(url, { ...options, width: 1024 });
+      if (req.query.download) res.attachment(`fight-night-qr.${format}`);
+      res.type(format).set('Cache-Control', 'no-cache').send(body);
+    } catch (err) {
+      res.status(500).json({ error: 'Klarte ikke å lage QR-koden' });
+    }
+  });
 
   app.get('/api/state', (req, res) => {
     const voterId = betting.isVoter(state, req.query.voterId) ? req.query.voterId : null;
@@ -342,7 +362,11 @@ function createApp({ dataFile, adminPassword }) {
 if (require.main === module) {
   const PORT = process.env.PORT || 3000;
   const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'ledertalent';
-  const app = createApp({ dataFile: path.join(__dirname, 'data', 'state.json'), adminPassword: ADMIN_PASSWORD });
+  const app = createApp({
+    dataFile: path.join(__dirname, 'data', 'state.json'),
+    adminPassword: ADMIN_PASSWORD,
+    publicUrl: process.env.PUBLIC_URL,
+  });
   app.listen(PORT, () => {
     console.log(`Fight Night-serveren kjører på http://localhost:${PORT}`);
     console.log(`Admin-passord: ${ADMIN_PASSWORD}`);

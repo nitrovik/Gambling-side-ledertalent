@@ -91,6 +91,12 @@ Testene (Node sin innebygde test-runner, ingen ekstra avhengigheter) dekker odds
 
 Blir et resultat registrert feil, retter du det i samme skjema ("Lagre rettet resultat"). "Fjern resultat" åpner bongene igjen. "Nullstill alt" sletter alle påmeldte, bonger, odds og resultater, for eksempel etter en generalprøve.
 
+## QR-kode
+
+Storskjermen viser en QR-kode nede i hjørnet i lobbyen og mens spillet på en kamp er åpent. Publikum scanner den med kameraet på mobilen og havner rett på siden. Koden peker automatisk på adressen storskjermen er åpnet på, så den stemmer både på Railway og på lokal WiFi.
+
+Vil du ha QR-koden på en slide, finner du den i adminpanelet under "QR-kode til publikum" (PNG eller SVG). Den kan også hentes direkte på `/qr.png` og `/qr.svg`.
+
 ## Slik får publikum tilgang fra mobilen
 
 Nettsiden trenger en liten server (for at alle skal se samme status i sanntid), så en ren statisk fil holder ikke. Enkleste løsninger:
@@ -98,7 +104,7 @@ Nettsiden trenger en liten server (for at alle skal se samme status i sanntid), 
 **Alternativ A — Samme WiFi (anbefalt for et rom):**
 1. Kjør `npm start` på laptopen din, koblet til samme WiFi som publikum.
 2. Finn din lokale IP (f.eks. `ipconfig` på Windows eller `ifconfig`/`ip a` på Mac/Linux — se etter noe som `192.168.x.x`).
-3. Del lenken `http://192.168.x.x:3000` med publikum (skriv den på en slide eller lag en QR-kode).
+3. Åpne storskjermen på `http://192.168.x.x:3000/skjerm.html`. QR-koden der peker da på riktig adresse.
 
 **Alternativ B — Skyløsning (fungerer uansett nett):**
 Deploy appen til en Node-vert som f.eks. [Railway](https://railway.app) eller [Render](https://render.com):
@@ -110,6 +116,7 @@ Deploy appen til en Node-vert som f.eks. [Railway](https://railway.app) eller [R
 
 - `ADMIN_PASSWORD` (miljøvariabel) — passord for adminpanelet. Standard er `ledertalent`.
 - `PORT` (miljøvariabel) — hvilken port serveren kjører på. Standard er `3000`.
+- `PUBLIC_URL` (miljøvariabel, valgfri) — adressen QR-koden skal peke på, hvis den skal være en annen enn den storskjermen er åpnet på (f.eks. et eget domene).
 
 Alt lagres i `data/state.json`, så ingenting går tapt om serveren restarter midt i presentasjonen. På Railway og lignende tjenester blir filen borte ved ny deploy, med mindre du kobler på et volum. Ikke deploy midt i leken.
 

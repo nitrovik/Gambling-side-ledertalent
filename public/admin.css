@@ -252,3 +252,16 @@
 .card .form-msg { margin: 10px 0 0; font-size: 14px; font-weight: 600; }
 .card .form-msg.ok { color: var(--success); }
 .card .form-msg.error { color: var(--danger); }
+
+.qr-card { text-align: center; }
+.qr-preview {
+  display: block;
+  width: 200px;
+  height: 200px;
+  margin: 8px auto;
+  padding: 10px;
+  background: #fff;
+  border-radius: 14px;
+}
+.card .qr-url { margin: 4px 0 0; font-weight: 700; color: var(--text); overflow-wrap: anywhere; }
+.qr-card .btn { text-decoration: none; }

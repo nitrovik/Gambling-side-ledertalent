@@ -347,3 +347,35 @@ body.skjerm-body {
   font-weight: 700;
   font-size: clamp(14px, 1.4vw, 20px);
 }
+
+/* Join QR code, pinned to the corner while people can join and bet */
+.skjerm-qr {
+  --qr-size: clamp(110px, 10vw, 190px);
+  position: fixed;
+  right: 2.5vw;
+  bottom: 3vh;
+  z-index: 2;
+  margin: 0;
+  padding: 12px 12px 8px;
+  background: #fff;
+  border-radius: 18px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.55), 0 0 0 4px rgba(255, 59, 92, 0.5);
+  text-align: center;
+}
+.skjerm-qr[hidden] { display: none; }
+.skjerm-qr img {
+  display: block;
+  width: var(--qr-size);
+  height: var(--qr-size);
+}
+.skjerm-qr p {
+  margin: 6px 0 0;
+  color: #111;
+  font-weight: 800;
+  font-size: clamp(12px, 1.1vw, 18px);
+}
+/* Keep the centred content clear of the QR card on narrower projectors. */
+body.show-qr .skjerm-app {
+  padding-left: calc(clamp(110px, 10vw, 190px) + 24px + 2.5vw + 16px);
+  padding-right: calc(clamp(110px, 10vw, 190px) + 24px + 2.5vw + 16px);
+}
