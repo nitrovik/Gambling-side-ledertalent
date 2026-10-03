@@ -55,6 +55,15 @@ async function balance(voterId) {
 
 const RITA_KO = { winner: 'rita', method: 'KO' };
 
+// Saves a result and shows it, which is when the bets settle.
+async function reveal(matchId, result) {
+  const saved = await admin(`/api/admin/matches/${matchId}/result`, { result });
+  assert.equal(saved.status, 200, JSON.stringify(saved.body));
+  const shown = await admin('/api/admin/phase', { phase: `${matchId}_result` });
+  assert.equal(shown.status, 200, JSON.stringify(shown.body));
+  return shown;
+}
+
 beforeEach(async () => {
   tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'fightnight-'));
   dataFile = path.join(tmpDir, 'state.json');
@@ -138,7 +147,7 @@ describe('API: låsing', () => {
   it('når resultatet er annonsert kan ingen spille på kampen lenger – heller ikke etter retting', async () => {
     await register(KARI, 'Kari');
     await admin('/api/admin/phase', { phase: 'match1_open' });
-    await admin('/api/admin/matches/match1/result', { result: RITA_KO });
+    await reveal('match1', RITA_KO);
     const state = await get(`/api/state?voterId=${KARI}`);
     assert.equal(state.body.phase, 'match1_result');
     assert.equal(state.body.matches.match1.stage, 'done');
@@ -171,7 +180,7 @@ describe('API: låsing', () => {
 });
 
 describe('API: resultat, avgjøring og retting', () => {
-  it('avgjør bonger, viser resultatet og retter feil uten dobbel utbetaling', async () => {
+  it('et lagret resultat avgjør ingenting og er hemmelig til admin trykker «Vis resultat»', async () => {
     await register(KARI, 'Kari');
     await register(OLA, 'Ola');
     await bet(KARI, ['match1:winner:rita'], 100);
@@ -180,17 +189,65 @@ describe('API: resultat, avgjøring og retting', () => {
 
     const saved = await admin('/api/admin/matches/match1/result', { result: RITA_KO });
     assert.equal(saved.status, 200, JSON.stringify(saved.body));
-    assert.equal(saved.body.phase, 'match1_result');
-    assert.equal(saved.body.changedBets, 2);
+    assert.equal(saved.body.published, false);
+    assert.equal(saved.body.phase, 'match1_open');
+    assert.equal(saved.body.changedBets, 0);
+    assert.equal(await balance(KARI), 1900);
+
+    const before = await get(`/api/state?voterId=${KARI}`);
+    assert.equal(before.body.matches.match1.result, null);
+    assert.equal(before.body.myBets[0].status, 'open');
+    assert.ok(before.body.matches.match1.markets.every((m) => m.open));
+    assert.equal(JSON.stringify(before.body).includes('vant på KO'), false);
+    assert.equal(JSON.stringify(await get('/api/state')).includes('plannedResult'), false);
+
+    const adminState = await call('GET', '/api/admin/state', undefined, { 'x-admin-key': ADMIN });
+    assert.deepEqual(adminState.body.matches[0].plannedResult, RITA_KO);
+    assert.equal(adminState.body.matches[0].plannedSummary, 'Rita Relator vant på KO i runde 3');
+    assert.equal(adminState.body.matches[0].rawResult, null);
+
+    const shown = await admin('/api/admin/phase', { phase: 'match1_result' });
+    assert.equal(shown.status, 200, JSON.stringify(shown.body));
+    assert.equal(shown.body.changedBets, 2);
     assert.equal(await balance(KARI), 2275);
     assert.equal(await balance(OLA), 1900);
+    const after = await get(`/api/state?voterId=${KARI}`);
+    assert.equal(after.body.matches.match1.result.summary, 'Rita Relator vant på KO i runde 3');
+    assert.equal(after.body.matches.match1.stage, 'done');
+
+    const again = await admin('/api/admin/phase', { phase: 'match1_result' });
+    assert.equal(again.body.changedBets, 0);
+    assert.equal(await balance(KARI), 2275);
+  });
+
+  it('det siste lagrede resultatet er det som vises', async () => {
+    await register(KARI, 'Kari');
+    await bet(KARI, ['match1:winner:pal'], 100);
+    await admin('/api/admin/matches/match1/result', { result: RITA_KO });
+    await admin('/api/admin/matches/match1/result', { result: { winner: 'pal', method: 'TKO' } });
+    assert.equal(await balance(KARI), 1900);
+    await admin('/api/admin/phase', { phase: 'match1_result' });
+    const state = await get(`/api/state?voterId=${KARI}`);
+    assert.equal(state.body.matches.match1.result.summary, 'Pål Producer vant på TKO i runde 3');
+    assert.equal(await balance(KARI), 2087);
+  });
+
+  it('retting etter at resultatet er vist avgjøres med en gang, uten dobbel utbetaling', async () => {
+    await register(KARI, 'Kari');
+    await register(OLA, 'Ola');
+    await bet(KARI, ['match1:winner:rita'], 100);
+    await bet(OLA, ['match1:winner:pal'], 100);
+    await admin('/api/admin/phase', { phase: 'match1_open' });
+    await reveal('match1', RITA_KO);
 
     const resaved = await admin('/api/admin/matches/match1/result', { result: RITA_KO });
+    assert.equal(resaved.body.published, true);
     assert.equal(resaved.body.changedBets, 0);
     assert.equal(await balance(KARI), 2275);
 
     const corrected = await admin('/api/admin/matches/match1/result', { result: { winner: 'pal', method: 'POENG' } });
     assert.equal(corrected.body.phase, 'match1_result');
+    assert.equal(corrected.body.changedBets, 2);
     assert.equal(await balance(KARI), 1900);
     assert.equal(await balance(OLA), 2087);
 
@@ -202,8 +259,7 @@ describe('API: resultat, avgjøring og retting', () => {
   it('resultatet er bare kampvinner og metode, og vinnermetode betaler kveldens odds', async () => {
     await register(KARI, 'Kari');
     await bet(KARI, ['match1:method:rita:KO'], 100);
-    const saved = await admin('/api/admin/matches/match1/result', { result: RITA_KO });
-    assert.equal(saved.status, 200, JSON.stringify(saved.body));
+    await reveal('match1', RITA_KO);
     const state = await get(`/api/state?voterId=${KARI}`);
     const { result } = state.body.matches.match1;
     assert.equal(result.summary, 'Rita Relator vant på KO i runde 3');
@@ -220,7 +276,7 @@ describe('API: resultat, avgjøring og retting', () => {
     assert.equal((await admin('/api/admin/matches/match9/result', { result: RITA_KO })).status, 404);
 
     await admin('/api/admin/phase', { phase: 'match1_open' });
-    await admin('/api/admin/matches/match1/result', { result: RITA_KO });
+    await reveal('match1', RITA_KO);
     assert.equal(await balance(KARI), 2275);
     const cleared = await admin('/api/admin/matches/match1/result', { result: null });
     assert.equal(cleared.body.phase, 'match1_open');
@@ -229,12 +285,20 @@ describe('API: resultat, avgjøring og retting', () => {
     assert.equal(state.body.myBets[0].status, 'open');
   });
 
-  it('faser som viser resultat krever at resultatet er registrert', async () => {
+  it('«Vis resultat» krever et lagret resultat, og sluttresultatet krever at alle er vist', async () => {
     assert.equal((await admin('/api/admin/phase', { phase: 'match1_result' })).status, 400);
     assert.equal((await admin('/api/admin/phase', { phase: 'final' })).status, 400);
     await admin('/api/admin/matches/match1/result', { result: RITA_KO });
-    assert.equal((await admin('/api/admin/phase', { phase: 'match1_result' })).status, 200);
-    assert.equal((await admin('/api/admin/phase', { phase: 'final' })).status, 400);
+    await admin('/api/admin/matches/match1/result', { result: null });
+    assert.equal((await admin('/api/admin/phase', { phase: 'match1_result' })).status, 400);
+
+    await reveal('match1', RITA_KO);
+    await admin('/api/admin/matches/match2/result', { result: { winner: 'petra', method: 'POENG' } });
+    const final = await admin('/api/admin/phase', { phase: 'final' });
+    assert.equal(final.status, 400);
+    assert.match(final.body.error, /Vis resultatet/);
+    await admin('/api/admin/phase', { phase: 'match2_result' });
+    assert.equal((await admin('/api/admin/phase', { phase: 'final' })).status, 200);
   });
 
   it('kveldens odds er standard: Rita 3,75 / Pål 1,87 og Petra 1,75 / Morten 2,05', async () => {
@@ -272,7 +336,7 @@ describe('API: resultat, avgjøring og retting', () => {
     assert.equal(profileOdds['fav:rita']['match1:method:pal:KO'], 13);
 
     await bet(KARI, ['match1:winner:rita'], 100);
-    await admin('/api/admin/matches/match1/result', { result: RITA_KO });
+    await reveal('match1', RITA_KO);
     const state = await get(`/api/state?voterId=${KARI}`);
     const payouts = state.body.myBets.map((b) => b.payoutOre).sort((a, b) => a - b);
     assert.deepEqual(payouts, [15500, 37500]);
@@ -287,7 +351,8 @@ describe('API: lagring', () => {
   it('saldo og bonger overlever at serveren startes på nytt', async () => {
     await register(KARI, 'Kari');
     await bet(KARI, ['match1:winner:rita'], 250);
-    await admin('/api/admin/matches/match1/result', { result: RITA_KO });
+    await reveal('match1', RITA_KO);
+    await admin('/api/admin/matches/match2/result', { result: { winner: 'petra', method: 'KO' } });
     const before = await get(`/api/state?voterId=${KARI}`);
 
     await stop();
@@ -297,6 +362,10 @@ describe('API: lagring', () => {
     assert.deepEqual(after.body.wallet, before.body.wallet);
     assert.deepEqual(after.body.myBets, before.body.myBets);
     assert.equal(after.body.wallet.balanceOre, 200000 - 25000 + 93750);
+    // The saved, not yet shown, result for kamp 2 survives the restart and stays hidden.
+    assert.equal(after.body.matches.match2.result, null);
+    const adminState = await call('GET', '/api/admin/state', undefined, { 'x-admin-key': ADMIN });
+    assert.deepEqual(adminState.body.matches[1].plannedResult, { winner: 'petra', method: 'KO' });
   });
 
   it('gammel lagring: bonger på runder fjernes (innsatsen tilbake) og kveldens odds tas i bruk', async () => {

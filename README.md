@@ -58,7 +58,8 @@ I adminpanelet kan du bytte til en generell profil per kamp og overstyre enkelto
 - **Låsing:** spillet på en kamp stenger når runde 1 starter. Når resultatet lagres, stenger hele kampen for godt. Å rette eller fjerne resultatet åpner den ikke igjen, siden alle har sett utfallet. Valg på en stengt kamp fjernes automatisk fra bongen på mobilen.
 
 **Avgjøring**
-- Admin registrerer kampvinner og metode (KO, TKO eller poeng). Bongene avgjøres automatisk.
+- Admin lagrer kampvinner og metode (KO, TKO eller poeng), gjerne på forhånd. Et lagret resultat er hemmelig og avgjør ingenting.
+- Når admin trykker "Vis resultat" for kampen, avsløres resultatet på storskjerm og mobiler, bongene avgjøres, og kampen stenger for godt.
 - Admin kan rette et feil resultat. Alle bonger avgjøres da på nytt, og ingen bong kan bli utbetalt to ganger. Hvis en deltaker allerede har brukt en gevinst som trekkes tilbake, går saldoen ikke under 0. Differansen trekkes fra neste gevinst i stedet.
 
 **Toppliste** — sortert på saldo, med avkastning i kr og %, antall bonger, treffprosent og største gevinst. Høyest saldo når leken avsluttes vinner.
@@ -96,9 +97,10 @@ Testene (Node sin innebygde test-runner, ingen ekstra avhengigheter) dekker odds
 1. **Lobby** – publikum registrerer seg og kan allerede spille.
 2. **Kamp 1 i fokus** – storskjermen viser Rita vs. Pål og hvor pengene ligger.
 3. Trykk **Runde 1** under "Kampforløp" når kampen starter. Da stenger spillet på kampen. **Runde 2** og **Runde 3** viser bare hvilken runde som pågår på storskjermen.
-4. Når runde 3 er ferdig: fyll inn **Resultat** (kampvinner og KO/TKO/poeng) og trykk "Lagre resultat og avgjør bonger". Bongene avgjøres, og storskjerm og mobiler viser avsløringen automatisk.
-5. Gjør det samme for **Kamp 2**.
-6. **Sluttresultat** – topplisten vises. Den med høyest saldo vinner.
+4. Fyll inn **Resultat** (kampvinner og KO/TKO/poeng) og trykk "Lagre resultat". Det kan gjøres når som helst, også før kvelden starter. Ingenting vises og ingen bonger avgjøres ennå.
+5. Når kampen er ferdig: trykk **Vis resultat Kamp 1**. Resultatet avsløres på storskjerm og mobiler, og bongene avgjøres.
+6. Gjør det samme for **Kamp 2**.
+7. **Sluttresultat** – topplisten vises. Den med høyest saldo vinner.
 
 Blir et resultat registrert feil, retter du det i samme skjema ("Lagre rettet resultat"). "Fjern resultat" åpner bongene igjen. "Nullstill alt" sletter alle påmeldte, bonger, odds og resultater, for eksempel etter en generalprøve.
 

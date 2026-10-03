@@ -59,10 +59,13 @@ function formatKr(ore) {
   return `${sign}${kr}${rest ? `,${String(rest).padStart(2, '0')}` : ''} kr`;
 }
 
+// `plannedResult` is what the admin has entered, possibly long before the fight.
+// It stays private and settles nothing; `result` is the one that has been shown.
 function defaultMatchState(match) {
   return {
     stage: 'open',
     odds: { profile: match && match.standardOdds ? 'standard' : 'even', favorite: null, overrides: {} },
+    plannedResult: null,
     result: null,
   };
 }
@@ -269,6 +272,23 @@ function recordResult(state, match, input) {
   return settleAll(state);
 }
 
+// Saves the admin's result for later. Before it has been shown nothing happens to
+// the bets; once shown, a correction is applied (and settled) straight away.
+function planResult(state, match, input) {
+  const result = normalizeResult(match, input);
+  const matchState = state.matches[match.id];
+  matchState.plannedResult = result;
+  if (!matchState.result) return { changed: 0, published: false };
+  return { ...recordResult(state, match, result), published: Boolean(result) };
+}
+
+// Shows the saved result: settles the bets and closes the match for good.
+function publishResult(state, match) {
+  const { plannedResult } = state.matches[match.id];
+  if (!plannedResult) throw new BetError('Lagre resultatet for kampen først');
+  return recordResult(state, match, plannedResult);
+}
+
 function selectionOutcome(sel, result) {
   if (!result) return 'pending';
   if (sel.market === 'winner') return sel.fighter === result.winner ? 'won' : 'lost';
@@ -415,6 +435,8 @@ module.exports = {
   placeBet,
   normalizeResult,
   recordResult,
+  planResult,
+  publishResult,
   selectionOutcome,
   evaluateBet,
   settleAll,

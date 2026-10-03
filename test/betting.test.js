@@ -18,6 +18,8 @@ const {
   placeBet,
   normalizeResult,
   recordResult,
+  planResult,
+  publishResult,
   settleAll,
   buildLeaderboard,
   backingFor,
@@ -462,6 +464,56 @@ describe('resultat', () => {
     assert.throws(() => normalizeResult(match, { method: 'KO' }), /vant kampen/);
     assert.throws(() => normalizeResult(match, undefined), /Mangler/);
     assert.equal(normalizeResult(match, null), null);
+  });
+});
+
+describe('lagret resultat som vises senere', () => {
+  it('et lagret resultat avgjør ingenting og stenger ikke spillet', () => {
+    const state = newState();
+    const bet = place(state, 'v1', ['match1:winner:rita'], 100);
+    const saved = planResult(state, MATCHES[0], RITA_WINS_KO);
+    assert.deepEqual(saved, { changed: 0, published: false });
+    assert.deepEqual(state.matches.match1.plannedResult, RITA_WINS_KO);
+    assert.equal(state.matches.match1.result, null);
+    assert.equal(state.matches.match1.stage, 'open');
+    assert.equal(bet.status, 'open');
+    assert.equal(balanceKr(state, 'v1'), 1900);
+    place(state, 'v2', ['match1:winner:pal'], 100);
+  });
+
+  it('når resultatet vises, avgjøres bongene og kampen stenger for godt', () => {
+    const state = newState();
+    const bet = place(state, 'v1', ['match1:winner:rita'], 100);
+    planResult(state, MATCHES[0], RITA_WINS_KO);
+    assert.equal(publishResult(state, MATCHES[0]).changed, 1);
+    assert.equal(bet.status, 'won');
+    assert.equal(state.matches.match1.stage, 'done');
+    assert.equal(balanceKr(state, 'v1'), 2087);
+    assert.throws(() => place(state, 'v2', ['match1:winner:pal'], 100), /låst/);
+    assert.equal(publishResult(state, MATCHES[0]).changed, 0);
+    assert.equal(balanceKr(state, 'v1'), 2087);
+  });
+
+  it('retting etter at resultatet er vist avgjøres med en gang', () => {
+    const state = newState();
+    const bet = place(state, 'v1', ['match1:winner:rita'], 100);
+    planResult(state, MATCHES[0], RITA_WINS_KO);
+    publishResult(state, MATCHES[0]);
+    const corrected = planResult(state, MATCHES[0], { winner: 'pal', method: 'POENG' });
+    assert.deepEqual(corrected, { changed: 1, published: true });
+    assert.equal(bet.status, 'lost');
+    const cleared = planResult(state, MATCHES[0], null);
+    assert.equal(cleared.published, false);
+    assert.equal(bet.status, 'open');
+    assert.equal(state.matches.match1.stage, 'done');
+  });
+
+  it('kan ikke vise et resultat som ikke er lagret', () => {
+    const state = newState();
+    assert.throws(() => publishResult(state, MATCHES[0]), /Lagre resultatet/);
+    planResult(state, MATCHES[0], RITA_WINS_KO);
+    planResult(state, MATCHES[0], null);
+    assert.throws(() => publishResult(state, MATCHES[0]), /Lagre resultatet/);
   });
 });
 

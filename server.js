@@ -59,11 +59,11 @@ function defaultState() {
 function phaseError(state, phase) {
   if (!PHASES.includes(phase)) return 'Ukjent fase';
   const resultPhase = phase.match(/^(match\d+)_result$/);
-  if (resultPhase && !state.matches[resultPhase[1]].result) {
-    return 'Registrer resultatet for kampen før du viser det';
+  if (resultPhase && !state.matches[resultPhase[1]].result && !state.matches[resultPhase[1]].plannedResult) {
+    return 'Lagre resultatet for kampen før du viser det';
   }
   if (phase === 'final' && MATCH_DEFS.some((m) => !state.matches[m.id].result)) {
-    return 'Registrer resultat for alle kampene før du viser sluttresultatet';
+    return 'Vis resultatet for alle kampene før du viser sluttresultatet';
   }
   return null;
 }
@@ -99,7 +99,15 @@ function normalizeState(raw) {
     } catch (err) {
       target.result = null;
     }
-    if (target.result) target.stage = 'done';
+    try {
+      target.plannedResult = betting.normalizeResult(def, saved.plannedResult === undefined ? null : saved.plannedResult);
+    } catch (err) {
+      target.plannedResult = null;
+    }
+    if (target.result) {
+      target.stage = 'done';
+      target.plannedResult = target.result;
+    }
   });
   if (!phaseError(state, raw.phase)) state.phase = raw.phase;
   betting.settleAll(state);
@@ -341,6 +349,10 @@ function createApp({ dataFile, adminPassword, publicUrl }) {
             [`fav:${def.fighterB}`]: betting.baseOdds(def, { profile: 'favorite', favorite: def.fighterB }),
           },
           rawResult: state.matches[def.id].result,
+          plannedResult: state.matches[def.id].plannedResult,
+          plannedSummary: state.matches[def.id].plannedResult
+            ? betting.describeResult(state.matches[def.id].plannedResult, FIGHTERS)
+            : null,
         };
       }),
       leaderboard: leaderboardPayload(null),
@@ -351,14 +363,20 @@ function createApp({ dataFile, adminPassword, publicUrl }) {
     });
   });
 
-  app.post('/api/admin/phase', checkAdmin, (req, res) => {
+  // "Vis resultat" is the moment a saved result is revealed and the bets settle.
+  app.post('/api/admin/phase', checkAdmin, handle((req, res) => {
     const { phase } = req.body || {};
     const error = phaseError(state, phase);
     if (error) return res.status(400).json({ error });
+    const reveal = /^(match\d+)_result$/.exec(phase);
+    let changedBets = 0;
+    if (reveal && !state.matches[reveal[1]].result) {
+      changedBets = betting.publishResult(state, findMatch(reveal[1])).changed;
+    }
     state.phase = phase;
     saveState();
-    res.json({ ok: true, phase: state.phase });
-  });
+    res.json({ ok: true, phase: state.phase, changedBets });
+  }));
 
   app.post('/api/admin/matches/:matchId/stage', checkAdmin, (req, res) => {
     const def = findMatch(req.params.matchId);
@@ -385,13 +403,13 @@ function createApp({ dataFile, adminPassword, publicUrl }) {
   app.post('/api/admin/matches/:matchId/result', checkAdmin, handle((req, res) => {
     const def = findMatch(req.params.matchId);
     if (!def) return res.status(404).json({ error: 'Ukjent kamp' });
-    const { changed } = betting.recordResult(state, def, (req.body || {}).result);
-    const { result } = state.matches[def.id];
-    if (result && state.phase === `${def.id}_open`) state.phase = `${def.id}_result`;
-    if (!result && phaseError(state, state.phase)) state.phase = `${def.id}_open`;
+    // Only saves the result. It is shown, and the bets settle, when the admin
+    // moves to "Vis resultat" – unless it has been shown already (a correction).
+    const { changed, published } = betting.planResult(state, def, (req.body || {}).result);
+    if (phaseError(state, state.phase)) state.phase = `${def.id}_open`;
     saveState();
     const votersWithDebt = Object.keys(state.voters).filter((id) => betting.walletOf(state, id).debtOre > 0).length;
-    res.json({ ok: true, phase: state.phase, changedBets: changed, votersWithDebt });
+    res.json({ ok: true, phase: state.phase, published, changedBets: changed, votersWithDebt });
   }));
 
   app.post('/api/admin/reset', checkAdmin, (req, res) => {

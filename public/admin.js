@@ -129,7 +129,7 @@
       <section class="card" id="admin-status"></section>
       <section class="card">
         <h2>Styring</h2>
-        <p class="muted small">Bestemmer hva storskjermen og mobilene viser. Å lagre et resultat mens kampen er i fokus går automatisk videre til avsløringen.</p>
+        <p class="muted small">Bestemmer hva storskjermen og mobilene viser. «Vis resultat» avslører resultatet du har lagret for kampen, og avgjør bongene.</p>
         <div class="phase-list" id="admin-phases"></div>
       </section>
       ${data.matches.map((m) => `
@@ -178,11 +178,13 @@
 
   function phaseLabel(data, id) {
     if (id === 'lobby') return { label: 'Lobby', desc: 'Fighterne vises – publikum registrerer seg og kan spille' };
-    if (id === 'final') return { label: 'Sluttresultat', desc: 'Toppliste – høyest saldo vinner leken (krever alle resultater)' };
+    if (id === 'final') return { label: 'Sluttresultat', desc: 'Toppliste – høyest saldo vinner leken (krever at alle resultater er vist)' };
     const [, matchId, kind] = /^(match\d+)_(open|result)$/.exec(id);
     const m = data.matches.find((x) => x.id === matchId);
     if (kind === 'open') return { label: `${m.title} i fokus`, desc: `${m.fighterA.name} vs ${m.fighterB.name}` };
-    return { label: `Vis resultat ${m.title}`, desc: m.result ? m.result.summary : 'Krever at resultatet er registrert' };
+    if (m.result) return { label: `Vis resultat ${m.title}`, desc: `Vist: ${m.result.summary}` };
+    if (m.plannedSummary) return { label: `Vis resultat ${m.title}`, desc: `Avslører: ${m.plannedSummary} – bongene avgjøres` };
+    return { label: `Vis resultat ${m.title}`, desc: 'Lagre resultatet for kampen først' };
   }
 
   function renderStatus(data) {
@@ -287,13 +289,17 @@
   }
 
   function renderResultForm(m) {
-    const r = m.rawResult;
+    const r = m.plannedResult;
+    const shown = Boolean(m.rawResult);
+    let status = '<p class="result-current">Ingen resultat lagret ennå. Du kan legge det inn på forhånd – ingenting avgjøres før du trykker «Vis resultat».</p>';
+    if (shown) status = `<p class="result-current set">✅ Vist og avgjort: ${esc(m.result.summary)}</p>`;
+    else if (r) status = `<p class="result-current planned">📝 Lagret, ikke vist ennå: ${esc(m.plannedSummary)}. Bongene avgjøres når du trykker «Vis resultat ${esc(m.title)}».</p>`;
     const fighterOptions = (selected) => `<option value="">Velg …</option>${m.fighters.map((f) => `
       <option value="${f.id}" ${selected === f.id ? 'selected' : ''}>${esc(f.name)}</option>
     `).join('')}`;
     return `
       <form data-form="result" data-match="${m.id}">
-        <p class="result-current ${r ? 'set' : ''}">${r ? `✅ Registrert: ${esc(m.result.summary)}` : 'Ingen resultat registrert ennå.'}</p>
+        ${status}
         <div class="form-grid two">
           <label class="field">Kampvinner<select name="winner">${fighterOptions(r && r.winner)}</select></label>
           <label class="field">Avgjort på<select name="method">
@@ -303,7 +309,7 @@
         </div>
         <p class="muted small">Kampen går alltid 3 runder og avgjøres i runde 3.</p>
         <div class="form-actions">
-          <button class="btn" type="submit">${r ? 'Lagre rettet resultat' : 'Lagre resultat og avgjør bonger'}</button>
+          <button class="btn" type="submit">${shown ? 'Lagre rettet resultat' : 'Lagre resultat'}</button>
           ${r ? `<button class="btn danger-btn" type="button" data-action="clear-result" data-match="${m.id}">Fjern resultat</button>` : ''}
           <button class="btn ghost-btn" type="button" data-action="discard" data-match="${m.id}" data-form-kind="result">Angre</button>
         </div>
@@ -472,9 +478,18 @@
     const matchId = form.dataset.match;
     const key = `result:${matchId}`;
     try {
+      const match = lastData.matches.find((m) => m.id === matchId);
+      const wasShown = Boolean(match && match.rawResult);
       const data = await adminPost(`/api/admin/matches/${matchId}/result`, { result });
-      const parts = [result ? 'Resultatet er lagret.' : 'Resultatet er fjernet – bongene er åpne igjen.'];
-      parts.push(`${data.changedBets} ${data.changedBets === 1 ? 'bong' : 'bonger'} fikk nytt utfall.`);
+      const parts = [];
+      if (!wasShown) {
+        parts.push(result
+          ? `Resultatet er lagret, men ikke vist. Det avsløres og bongene avgjøres når du trykker «Vis resultat ${match.title}».`
+          : 'Det lagrede resultatet er fjernet.');
+      } else {
+        parts.push(result ? 'Resultatet er rettet.' : 'Resultatet er fjernet – bongene er åpne igjen.');
+        parts.push(`${data.changedBets} ${data.changedBets === 1 ? 'bong' : 'bonger'} fikk nytt utfall.`);
+      }
       if (data.votersWithDebt) {
         parts.push(`${data.votersWithDebt} deltaker(e) hadde allerede brukt gevinsten – differansen trekkes fra neste gevinst.`);
       }
@@ -506,8 +521,12 @@
 
     try {
       if (action === 'phase') {
+        const reveal = /^(match\d+)_result$/.exec(btn.dataset.phase);
+        const match = reveal && lastData.matches.find((m) => m.id === reveal[1]);
+        if (match && !match.rawResult && match.plannedSummary
+          && !confirm(`Vise resultatet for ${match.title} nå? «${match.plannedSummary}» avsløres på storskjermen og mobilene, og bongene avgjøres.`)) return;
         await adminPost('/api/admin/phase', { phase: btn.dataset.phase });
-        await loadState();
+        await loadState({ forceForms: match ? [`result:${match.id}`] : [] });
       }
       if (action === 'stage') {
         const match = lastData.matches.find((m) => m.id === matchId);
@@ -526,7 +545,11 @@
         await loadState({ forceForms: [`${btn.dataset.formKind}:${matchId}`] });
       }
       if (action === 'clear-result') {
-        if (!confirm('Fjerne resultatet? Alle bonger på kampen blir åpne igjen og gevinster trekkes tilbake.')) return;
+        const shown = Boolean(lastData.matches.find((m) => m.id === matchId).rawResult);
+        const question = shown
+          ? 'Fjerne resultatet? Alle bonger på kampen blir åpne igjen og gevinster trekkes tilbake.'
+          : 'Fjerne det lagrede resultatet?';
+        if (!confirm(question)) return;
         await saveResult(btn.closest('form'), null);
       }
       if (action === 'reset') {
@@ -555,10 +578,7 @@
     const description = winner && method
       ? `${winner.name} vant på ${result.method === 'POENG' ? 'poeng' : `${method.label} i runde 3`}`
       : 'resultatet';
-    const question = match.rawResult
-      ? `Rette resultatet til «${description}»? Alle bonger på kampen avgjøres på nytt.`
-      : `Lagre «${description}»? Bongene avgjøres med en gang${lastData.phase === `${match.id}_open` ? ' og resultatet vises på storskjermen' : ''}.`;
-    if (!confirm(question)) return;
+    if (match.rawResult && !confirm(`Rette resultatet til «${description}»? Alle bonger på kampen avgjøres på nytt.`)) return;
     await saveResult(form, result);
   });
 

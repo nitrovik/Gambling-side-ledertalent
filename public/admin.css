@@ -248,6 +248,7 @@
   font-size: 14px;
 }
 .card .result-current.set { color: var(--success); font-weight: 600; }
+.card .result-current.planned { color: var(--morten); font-weight: 600; }
 
 .card .form-msg { margin: 10px 0 0; font-size: 14px; font-weight: 600; }
 .card .form-msg.ok { color: var(--success); }
