@@ -218,7 +218,7 @@
         <h2>${esc(m.title)}: <span style="color:${m.fighterA.color}">${esc(m.fighterA.name)}</span> vs <span style="color:${m.fighterB.color}">${esc(m.fighterB.name)}</span></h2>
       </div>
       <p class="match-stats">
-        ${m.backing.betCount} bonger · ${formatKr(m.backing.totalStakeOre)} satset ·
+        ${m.backing.betCount} ${m.backing.betCount === 1 ? 'bong' : 'bonger'} · ${formatKr(m.backing.totalStakeOre)} satset ·
         ${esc(m.fighterA.name.split(' ')[0])} ${pct(byFighter[m.fighterA.id], backed)} % / ${esc(m.fighterB.name.split(' ')[0])} ${pct(byFighter[m.fighterB.id], backed)} % av pengene på vinneren
       </p>
       <h3 class="admin-sub">Kampforløp</h3>
@@ -229,12 +229,12 @@
       </div>
       ${m.stage === 'done'
         ? '<p class="closed-note">🔒 Kampen er avgjort og stengt for spill for godt. Å rette eller fjerne resultatet åpner den ikke igjen.</p>'
-        : '<p class="muted small">Kampvinner og metode stenger når runde 1 starter. Hvert rundemarked stenger når den runden starter. Når resultatet lagres, stenger hele kampen for godt.</p>'}
+        : '<p class="muted small">Spillet på kampen stenger når du trykker «Runde 1». Når resultatet lagres, stenger kampen for godt.</p>'}
     `;
   }
 
   function currentProfileKey(m) {
-    return m.oddsConfig.profile === 'favorite' ? `fav:${m.oddsConfig.favorite}` : 'even';
+    return m.oddsConfig.profile === 'favorite' ? `fav:${m.oddsConfig.favorite}` : m.oddsConfig.profile;
   }
 
   // Save confirmations fade out on a later poll so they don't linger as stale news.
@@ -253,6 +253,7 @@
       <form data-form="odds" data-match="${m.id}">
         <label class="field">Oddsprofil
           <select name="profile">
+            ${option('standard', `Kveldens odds (${m.fighterA.name.split(' ')[0]} ${formatOdds(m.profileOdds.standard[`${m.id}:winner:${m.fighterA.id}`])} / ${m.fighterB.name.split(' ')[0]} ${formatOdds(m.profileOdds.standard[`${m.id}:winner:${m.fighterB.id}`])})`)}
             ${option('even', 'Jevn kamp (50/50)')}
             ${option(`fav:${m.fighterA.id}`, `Favoritt: ${m.fighterA.name} (60/40)`)}
             ${option(`fav:${m.fighterB.id}`, `Favoritt: ${m.fighterB.name} (60/40)`)}
@@ -293,11 +294,6 @@
     return `
       <form data-form="result" data-match="${m.id}">
         <p class="result-current ${r ? 'set' : ''}">${r ? `✅ Registrert: ${esc(m.result.summary)}` : 'Ingen resultat registrert ennå.'}</p>
-        <div class="form-grid">
-          ${[1, 2, 3].map((n) => `
-            <label class="field">Vinner runde ${n}<select name="r${n}">${fighterOptions(r && r.roundWinners[n])}</select></label>
-          `).join('')}
-        </div>
         <div class="form-grid two">
           <label class="field">Kampvinner<select name="winner">${fighterOptions(r && r.winner)}</select></label>
           <label class="field">Avgjort på<select name="method">
@@ -305,7 +301,7 @@
             ${METHODS.map((x) => `<option value="${x.id}" ${r && r.method === x.id ? 'selected' : ''}>${x.label}</option>`).join('')}
           </select></label>
         </div>
-        <p class="muted small">Kampen går alltid 3 runder og avgjøres i runde 3. Ved KO eller TKO settes vinneren av runde 3 automatisk til kampvinneren.</p>
+        <p class="muted small">Kampen går alltid 3 runder og avgjøres i runde 3.</p>
         <div class="form-actions">
           <button class="btn" type="submit">${r ? 'Lagre rettet resultat' : 'Lagre resultat og avgjør bonger'}</button>
           ${r ? `<button class="btn danger-btn" type="button" data-action="clear-result" data-match="${m.id}">Fjern resultat</button>` : ''}
@@ -314,14 +310,6 @@
         ${formMessage(`result:${m.id}`)}
       </form>
     `;
-  }
-
-  // A KO or TKO always lands in round 3, so the match winner also takes that round.
-  function syncResultForm(form) {
-    const { winner, method, r3 } = form.elements;
-    const finish = method.value === 'KO' || method.value === 'TKO';
-    if (finish && winner.value) r3.value = winner.value;
-    r3.disabled = finish;
   }
 
   function renderLeaderboard(rows) {
@@ -352,8 +340,7 @@
   function isWinningPick(result, marketId, sel) {
     if (!result) return false;
     if (marketId === 'winner') return sel.fighter === result.winner;
-    if (marketId === 'method') return sel.fighter === result.winner && sel.method === result.method;
-    return result.roundWinners[marketId.slice(1)] === sel.fighter;
+    return sel.fighter === result.winner && sel.method === result.method;
   }
 
   // Every pick in the match with how many bets include it and the money on them.
@@ -365,7 +352,7 @@
         ${m.markets.map((market) => {
           const total = market.selections.reduce((sum, sel) => sum + sel.stakeOre, 0);
           return `
-            <div class="market-stat ${market.id === 'method' ? 'wide' : ''}">
+            <div class="market-stat">
               <p class="market-stat-title">${esc(market.label)}${market.open ? '' : ' 🔒'}</p>
               ${market.selections.map((sel) => {
                 const f = fighter(sel.fighter);
@@ -433,10 +420,7 @@
       patch(byId(`admin-${m.id}-head`), renderMatchHead(m));
       patch(byId(`admin-${m.id}-stats`), renderMarketStats(m));
       patch(byId(`admin-${m.id}-odds`), renderOddsForm(m), { form: true, force: forceForms.includes(`odds:${m.id}`) });
-      const resultEl = byId(`admin-${m.id}-result`);
-      if (patch(resultEl, renderResultForm(m), { form: true, force: forceForms.includes(`result:${m.id}`) })) {
-        syncResultForm(resultEl.querySelector('form'));
-      }
+      patch(byId(`admin-${m.id}-result`), renderResultForm(m), { form: true, force: forceForms.includes(`result:${m.id}`) });
     });
     patch(byId('admin-leaderboard'), renderLeaderboard(data.leaderboard));
     patch(byId('admin-bets'), renderBetsList(data.bets));
@@ -468,9 +452,9 @@
     form.querySelectorAll('.odds-input').forEach((input) => {
       if (input.value.trim()) overrides[input.dataset.key] = input.value.trim();
     });
-    const body = profileValue === 'even'
-      ? { profile: 'even', overrides }
-      : { profile: 'favorite', favorite: profileValue.slice(4), overrides };
+    const body = profileValue.startsWith('fav:')
+      ? { profile: 'favorite', favorite: profileValue.slice(4), overrides }
+      : { profile: profileValue, overrides };
     const key = `odds:${matchId}`;
     try {
       await adminPost(`/api/admin/matches/${matchId}/odds`, body);
@@ -506,11 +490,7 @@
 
   function readResultForm(form) {
     const el = form.elements;
-    const roundWinners = {};
-    [1, 2, 3].forEach((n) => {
-      roundWinners[n] = el[`r${n}`].value;
-    });
-    return { winner: el.winner.value, method: el.method.value, roundWinners };
+    return { winner: el.winner.value, method: el.method.value };
   }
 
   APP.addEventListener('click', async (e) => {
@@ -587,7 +567,6 @@
     if (!form) return;
     form.parentElement.dataset.dirty = '1';
     delete formMessages[`${form.dataset.form}:${form.dataset.match}`];
-    if (form.dataset.form === 'result') syncResultForm(form);
     if (form.dataset.form === 'odds' && e.target.name === 'profile' && lastData) {
       const match = lastData.matches.find((m) => m.id === form.dataset.match);
       const base = match.profileOdds[e.target.value];

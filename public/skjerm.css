@@ -333,20 +333,6 @@ body.skjerm-body {
 .skjerm-lb-net.up { color: var(--success); }
 .skjerm-lb-net.down { color: var(--danger); }
 
-.skjerm-rounds {
-  display: flex;
-  justify-content: center;
-  flex-wrap: wrap;
-  gap: 12px;
-}
-.skjerm-round {
-  padding: 8px 18px;
-  border: 2px solid;
-  border-radius: 999px;
-  background: var(--bg-card-2);
-  font-weight: 700;
-  font-size: clamp(14px, 1.4vw, 20px);
-}
 
 /* Join QR code, pinned to the corner while people can join and bet */
 .skjerm-qr {

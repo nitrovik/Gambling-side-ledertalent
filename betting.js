@@ -4,17 +4,14 @@
 const START_BALANCE_ORE = 200000;
 const MIN_STAKE_ORE = 1000;
 const MAX_SELECTIONS = 10;
-// 'done' is final: a match gets there when its result is saved and stays closed.
+// Betting is open until round 1 starts. 'done' is final: a match gets there when
+// its result is saved and stays closed.
 const STAGES = ['open', 'r1', 'r2', 'r3', 'done'];
-const ROUNDS = [1, 2, 3];
 const METHODS = ['POENG', 'TKO', 'KO'];
-const MARKETS = ['winner', 'r1', 'r2', 'r3', 'method'];
+const MARKETS = ['winner', 'method'];
 
 const MARKET_LABELS = {
   winner: 'Kampvinner',
-  r1: 'Rundevinner – runde 1',
-  r2: 'Rundevinner – runde 2',
-  r3: 'Rundevinner – runde 3',
   method: 'Vinnermetode',
 };
 
@@ -29,11 +26,11 @@ const STAGE_LABELS = {
 const METHOD_LABELS = { POENG: 'poeng', TKO: 'TKO', KO: 'KO' };
 const METHOD_SHORT = { POENG: 'Poeng', TKO: 'TKO', KO: 'KO' };
 
-// About 7 % margin on every market.
+// Generic profiles the admin can switch to, with about 7 % margin on every
+// market. A match can also bring its own odds per fighter ('standard').
 const ODDS_PROFILES = {
   even: {
     winner: { favorite: 1.87, underdog: 1.87 },
-    round: { favorite: 1.87, underdog: 1.87 },
     method: {
       favorite: { POENG: 3.75, TKO: 6.25, KO: 9.5 },
       underdog: { POENG: 3.75, TKO: 6.25, KO: 9.5 },
@@ -41,7 +38,6 @@ const ODDS_PROFILES = {
   },
   favorite: {
     winner: { favorite: 1.55, underdog: 2.35 },
-    round: { favorite: 1.55, underdog: 2.35 },
     method: {
       favorite: { POENG: 3.1, TKO: 5.2, KO: 7.8 },
       underdog: { POENG: 4.25, TKO: 8.5, KO: 13 },
@@ -63,10 +59,10 @@ function formatKr(ore) {
   return `${sign}${kr}${rest ? `,${String(rest).padStart(2, '0')}` : ''} kr`;
 }
 
-function defaultMatchState() {
+function defaultMatchState(match) {
   return {
     stage: 'open',
-    odds: { profile: 'even', favorite: null, overrides: {} },
+    odds: { profile: match && match.standardOdds ? 'standard' : 'even', favorite: null, overrides: {} },
     result: null,
   };
 }
@@ -76,11 +72,6 @@ function selectionsForMatch(match) {
   const list = [];
   fighters.forEach((fighter) => {
     list.push({ key: `${match.id}:winner:${fighter}`, matchId: match.id, market: 'winner', fighter });
-  });
-  ROUNDS.forEach((n) => {
-    fighters.forEach((fighter) => {
-      list.push({ key: `${match.id}:r${n}:${fighter}`, matchId: match.id, market: `r${n}`, fighter });
-    });
   });
   fighters.forEach((fighter) => {
     METHODS.forEach((method) => {
@@ -97,14 +88,19 @@ function parseSelection(key, matches) {
   return selectionsForMatch(match).find((s) => s.key === key) || null;
 }
 
-function baseOdds(match, oddsConfig) {
+// One fighter's odds under a profile, as { winner, POENG, TKO, KO }.
+function fighterOdds(match, oddsConfig, fighter) {
+  if (oddsConfig.profile === 'standard') return match.standardOdds[fighter];
   const profile = ODDS_PROFILES[oddsConfig.profile];
+  const side = oddsConfig.profile === 'favorite' && fighter !== oddsConfig.favorite ? 'underdog' : 'favorite';
+  return { winner: profile.winner[side], ...profile.method[side] };
+}
+
+function baseOdds(match, oddsConfig) {
   const odds = {};
   selectionsForMatch(match).forEach((sel) => {
-    const side = oddsConfig.profile === 'favorite' && sel.fighter !== oddsConfig.favorite ? 'underdog' : 'favorite';
-    if (sel.market === 'winner') odds[sel.key] = profile.winner[side];
-    else if (sel.market === 'method') odds[sel.key] = profile.method[side][sel.method];
-    else odds[sel.key] = profile.round[side];
+    const table = fighterOdds(match, oddsConfig, sel.fighter);
+    odds[sel.key] = sel.market === 'winner' ? table.winner : table[sel.method];
   });
   return odds;
 }
@@ -119,7 +115,8 @@ function computeOdds(match, oddsConfig) {
 
 function normalizeOddsConfig(match, input) {
   const profile = input && input.profile;
-  if (!ODDS_PROFILES[profile]) throw new BetError('Ukjent oddsprofil');
+  const known = ODDS_PROFILES[profile] || (profile === 'standard' && match.standardOdds);
+  if (!known) throw new BetError('Ukjent oddsprofil');
   let favorite = null;
   if (profile === 'favorite') {
     favorite = input.favorite;
@@ -141,12 +138,8 @@ function normalizeOddsConfig(match, input) {
   return { profile, favorite, overrides };
 }
 
-function isMarketOpen(matchState, market) {
-  if (!matchState || matchState.result) return false;
-  const stageIndex = STAGES.indexOf(matchState.stage);
-  if (stageIndex === -1) return false;
-  if (market === 'winner' || market === 'method') return stageIndex === 0;
-  return stageIndex < Number(market.slice(1));
+function isMarketOpen(matchState) {
+  return Boolean(matchState) && !matchState.result && matchState.stage === 'open';
 }
 
 function findConflict(selections) {
@@ -158,21 +151,15 @@ function findConflict(selections) {
     const marketId = `${sel.matchId}:${sel.market}`;
     if (markets.has(marketId)) {
       if (sel.market === 'winner') return 'Begge kan ikke vinne samme kamp';
-      if (sel.market === 'method') return 'En kamp kan bare avgjøres på én måte';
-      return `Begge kan ikke vinne runde ${sel.market.slice(1)}`;
+      return 'En kamp kan bare avgjøres på én måte';
     }
     markets.set(marketId, sel);
   }
-  // Picks from different markets stack freely, as long as they can all come true
-  // together. A KO or TKO always lands in round 3, so that round must match it.
+  // Winner and method stack freely, as long as they name the same fighter.
   for (const sel of selections) {
     if (sel.market !== 'method') continue;
     const winnerPick = markets.get(`${sel.matchId}:winner`);
     if (winnerPick && winnerPick.fighter !== sel.fighter) return 'Kampvinner og vinnermetode motsier hverandre';
-    const roundPick = markets.get(`${sel.matchId}:r3`);
-    if (sel.method !== 'POENG' && roundPick && roundPick.fighter !== sel.fighter) {
-      return `${METHOD_SHORT[sel.method]} og rundevinner i runde 3 motsier hverandre`;
-    }
   }
   return null;
 }
@@ -220,7 +207,7 @@ function placeBet(state, matches, input) {
   if (conflict) throw new BetError(conflict);
 
   for (const sel of parsed) {
-    if (!isMarketOpen(state.matches[sel.matchId], sel.market)) {
+    if (!isMarketOpen(state.matches[sel.matchId])) {
       const match = matches.find((m) => m.id === sel.matchId);
       throw new BetError(`${MARKET_LABELS[sel.market]} i ${match.title || match.id} er låst`);
     }
@@ -267,20 +254,9 @@ function placeBet(state, matches, input) {
 function normalizeResult(match, input) {
   if (input === null) return null;
   if (!input || typeof input !== 'object') throw new BetError('Mangler resultat');
-  const fighters = [match.fighterA, match.fighterB];
-  if (!fighters.includes(input.winner)) throw new BetError('Velg hvem som vant kampen');
+  if (![match.fighterA, match.fighterB].includes(input.winner)) throw new BetError('Velg hvem som vant kampen');
   if (!METHODS.includes(input.method)) throw new BetError('Velg vinnermetode (KO, TKO eller poeng)');
-  const given = input.roundWinners || {};
-  const roundWinners = {};
-  ROUNDS.forEach((n) => {
-    if (!fighters.includes(given[n])) throw new BetError(`Velg hvem som vant runde ${n}`);
-    roundWinners[n] = given[n];
-  });
-  // Every fight goes all three rounds, so a KO or TKO always lands in round 3.
-  if (input.method !== 'POENG' && roundWinners[3] !== input.winner) {
-    throw new BetError(`${METHOD_SHORT[input.method]} skjer i runde 3 – da må kampvinneren også ha vunnet runde 3`);
-  }
-  return { winner: input.winner, method: input.method, roundWinners };
+  return { winner: input.winner, method: input.method };
 }
 
 // Saving a result closes the match for betting for good. Correcting or removing
@@ -296,10 +272,7 @@ function recordResult(state, match, input) {
 function selectionOutcome(sel, result) {
   if (!result) return 'pending';
   if (sel.market === 'winner') return sel.fighter === result.winner ? 'won' : 'lost';
-  if (sel.market === 'method') {
-    return sel.fighter === result.winner && sel.method === result.method ? 'won' : 'lost';
-  }
-  return result.roundWinners[Number(sel.market.slice(1))] === sel.fighter ? 'won' : 'lost';
+  return sel.fighter === result.winner && sel.method === result.method ? 'won' : 'lost';
 }
 
 function evaluateBet(bet, matchStates) {
@@ -405,10 +378,7 @@ function matchSummaryFor(state, voterId, matchId) {
 function describeSelection(sel, fighters) {
   const name = fighters[sel.fighter] ? fighters[sel.fighter].name : sel.fighter;
   if (sel.market === 'winner') return { label: `${name} vinner kampen`, short: name };
-  if (sel.market === 'method') {
-    return { label: `${name} vinner på ${METHOD_LABELS[sel.method]}`, short: METHOD_SHORT[sel.method] };
-  }
-  return { label: `Runde ${sel.market.slice(1)}: ${name}`, short: name };
+  return { label: `${name} vinner på ${METHOD_LABELS[sel.method]}`, short: METHOD_SHORT[sel.method] };
 }
 
 function describeResult(result, fighters) {
@@ -422,7 +392,6 @@ module.exports = {
   MIN_STAKE_ORE,
   MAX_SELECTIONS,
   STAGES,
-  ROUNDS,
   METHODS,
   MARKETS,
   MARKET_LABELS,

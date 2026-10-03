@@ -10,9 +10,6 @@
   const QUICK_STAKES_KR = [50, 100, 250];
   const MARKET_MENUS = {
     winner: { title: 'Kampvinner', hint: 'Hvem vinner kampen?' },
-    r1: { title: 'Runde 1', hint: 'Hvem vinner runde 1?' },
-    r2: { title: 'Runde 2', hint: 'Hvem vinner runde 2?' },
-    r3: { title: 'Runde 3', hint: 'Hvem vinner runde 3?' },
     method: { title: 'Vinnermetode', hint: 'Hvem vinner – og på KO, TKO eller poeng?' },
   };
   const OUTCOME_ICONS = { pending: '⏳', won: '✅', lost: '❌' };
@@ -162,17 +159,13 @@
     };
   }
 
-  // Mirrors the server: one pick per market, and no picks in the same match that
-  // can't all come true (a KO/TKO always lands in round 3).
+  // Mirrors the server: one pick per market, and winner and method in the same
+  // match must name the same fighter.
   function sameMatchClash(existingKey, key) {
-    const [matchId, market, fighter, method] = key.split(':');
-    const [otherMatch, otherMarket, otherFighter, otherMethod] = existingKey.split(':');
+    const [matchId, market, fighter] = key.split(':');
+    const [otherMatch, otherMarket, otherFighter] = existingKey.split(':');
     if (otherMatch !== matchId) return false;
-    if (otherMarket === market) return true;
-    if (otherFighter === fighter) return false;
-    const pair = [market, otherMarket].sort().join('+');
-    if (pair === 'method+winner') return true;
-    return pair === 'method+r3' && (method || otherMethod) !== 'POENG';
+    return otherMarket === market || otherFighter !== fighter;
   }
 
   // After a pick, scroll just enough that the tapped odds aren't hidden behind the slip.
@@ -183,7 +176,8 @@
       // Measured from where the slip ends up, not where its slide-in animation is now.
       const slipTop = window.innerHeight - BETSLIP.offsetHeight;
       const gap = button.getBoundingClientRect().bottom - slipTop + 16;
-      if (gap > 0) window.scrollBy({ top: gap, behavior: 'smooth' });
+      // Instant, so the next odds button doesn't move under someone's finger.
+      if (gap > 0) window.scrollBy({ top: gap, behavior: 'instant' });
     }));
   }
 
@@ -204,12 +198,8 @@
       const market = key.split(':')[1];
       const replaced = slip.keys.filter((k) => sameMatchClash(k, key));
       slip.keys = slip.keys.filter((k) => !sameMatchClash(k, key)).concat(key);
-      const otherMarkets = replaced.map((k) => k.split(':')[1]).filter((m) => m !== market);
-      if (otherMarkets.length) {
-        const roundClash = market === 'r3' || otherMarkets.includes('r3');
-        showToast(roundClash
-          ? 'KO og TKO skjer i runde 3, så samme fighter må vinne runde 3 – det forrige valget ble byttet ut.'
-          : 'Kampvinner og vinnermetode må gjelde samme fighter – det forrige valget ble byttet ut.');
+      if (replaced.some((k) => k.split(':')[1] !== market)) {
+        showToast('Kampvinner og vinnermetode må gjelde samme fighter – det forrige valget ble byttet ut.');
       }
     }
     // The bet slip pops up when someone starts a new slip.
@@ -404,7 +394,7 @@
         <p class="tally-heading">Pengene i salen – hvem tror folk vinner?</p>
         ${row(a)}
         ${row(b)}
-        <p class="tally-total">${formatKr(match.backing.totalStakeOre)} satset · ${match.backing.betCount} bonger</p>
+        <p class="tally-total">${formatKr(match.backing.totalStakeOre)} satset · ${match.backing.betCount} ${match.backing.betCount === 1 ? 'bong' : 'bonger'}</p>
       </div>
     `;
   }
@@ -443,16 +433,6 @@
     return `${result.methodLabel} i runde 3`;
   }
 
-  function roundChips(result) {
-    return `
-      <div class="round-chips">
-        ${result.rounds.map((r) => `
-          <span class="round-chip" style="border-color:${r.winner.color}">R${r.round}: ${esc(r.winner.name.split(' ')[0])}</span>
-        `).join('')}
-      </div>
-    `;
-  }
-
   function renderMatchResult(match, summary, compact) {
     const { result } = match;
     const verdict = summaryVerdict(summary);
@@ -463,7 +443,6 @@
         ${compact ? '' : `<img src="${result.winner.photo}" alt="${esc(result.winner.name)}" />`}
         <p class="result-name" style="color:${result.winner.color}">${esc(result.winner.name)}</p>
         <p class="result-summary">${esc(howItEnded(result))}</p>
-        ${roundChips(result)}
         <p class="result-verdict ${verdict.cls}">${esc(verdict.text)}</p>
         ${compact ? '' : renderBacking(match)}
       </section>

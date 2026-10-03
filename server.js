@@ -15,20 +15,44 @@ const FIGHTERS = {
     type: 'Mål og resultat' },
 };
 
+// The evening's odds per fighter. Each fighter's winner odds are split across
+// the methods (about 50 % poeng, 30 % TKO, 20 % KO), so the two always agree.
 const MATCH_DEFS = [
-  { id: 'match1', title: 'Kamp 1', fighterA: 'rita', fighterB: 'pal' },
-  { id: 'match2', title: 'Kamp 2', fighterA: 'petra', fighterB: 'morten' },
+  {
+    id: 'match1',
+    title: 'Kamp 1',
+    fighterA: 'rita',
+    fighterB: 'pal',
+    standardOdds: {
+      rita: { winner: 3.75, POENG: 7.5, TKO: 12.5, KO: 19 },
+      pal: { winner: 1.87, POENG: 3.75, TKO: 6.25, KO: 9.5 },
+    },
+  },
+  {
+    id: 'match2',
+    title: 'Kamp 2',
+    fighterA: 'petra',
+    fighterB: 'morten',
+    standardOdds: {
+      petra: { winner: 1.75, POENG: 3.5, TKO: 5.85, KO: 8.9 },
+      morten: { winner: 2.05, POENG: 4.1, TKO: 6.85, KO: 10.4 },
+    },
+  },
 ];
+
+// Version 2 dropped the round markets and made each match's own odds the default.
+const STATE_VERSION = 2;
 
 const PHASES = ['lobby', 'match1_open', 'match1_result', 'match2_open', 'match2_result', 'final'];
 
 function defaultState() {
   return {
+    version: STATE_VERSION,
     phase: 'lobby',
     voters: {},
     bets: [],
     betSeq: 0,
-    matches: Object.fromEntries(MATCH_DEFS.map((m) => [m.id, betting.defaultMatchState()])),
+    matches: Object.fromEntries(MATCH_DEFS.map((m) => [m.id, betting.defaultMatchState(m)])),
   };
 }
 
@@ -47,16 +71,26 @@ function phaseError(state, phase) {
 function normalizeState(raw) {
   const state = defaultState();
   if (!raw || typeof raw !== 'object') return state;
+  const fromOlderVersion = raw.version !== STATE_VERSION;
   if (raw.voters && typeof raw.voters === 'object') state.voters = raw.voters;
-  if (Array.isArray(raw.bets)) state.bets = raw.bets;
+  // Bets on markets that no longer exist (the old round markets) are dropped,
+  // which gives the stake back since balances are worked out from the bets.
+  if (Array.isArray(raw.bets)) {
+    state.bets = raw.bets.filter((bet) => bet && Array.isArray(bet.selections)
+      && bet.selections.every((sel) => sel && betting.parseSelection(sel.key, MATCH_DEFS)));
+  }
   if (Number.isInteger(raw.betSeq)) state.betSeq = raw.betSeq;
   MATCH_DEFS.forEach((def) => {
     const saved = raw.matches && raw.matches[def.id];
     if (!saved) return;
     const target = state.matches[def.id];
     if (betting.STAGES.includes(saved.stage)) target.stage = saved.stage;
+    // Older saves always had the plain 'even' profile by default; those get the
+    // match's own odds instead. A profile the admin picked is kept.
+    const untouchedOldDefault = fromOlderVersion && saved.odds && saved.odds.profile === 'even'
+      && !Object.keys(saved.odds.overrides || {}).length;
     try {
-      target.odds = betting.normalizeOddsConfig(def, saved.odds);
+      if (!untouchedOldDefault) target.odds = betting.normalizeOddsConfig(def, saved.odds);
     } catch (err) {
       // keep default odds
     }
@@ -91,7 +125,6 @@ function resultPayload(result) {
     method: result.method,
     methodLabel: betting.METHOD_SHORT[result.method],
     summary: betting.describeResult(result, FIGHTERS),
-    rounds: betting.ROUNDS.map((n) => ({ round: n, winner: publicFighter(result.roundWinners[n]) })),
   };
 }
 
@@ -126,7 +159,7 @@ function createApp({ dataFile, adminPassword, publicUrl }) {
       markets: betting.MARKETS.map((market) => ({
         id: market,
         label: betting.MARKET_LABELS[market],
-        open: betting.isMarketOpen(matchState, market),
+        open: betting.isMarketOpen(matchState),
         selections: selections
           .filter((sel) => sel.market === market)
           .map((sel) => ({
@@ -302,6 +335,7 @@ function createApp({ dataFile, adminPassword, publicUrl }) {
           fighters: [publicFighter(def.fighterA), publicFighter(def.fighterB)],
           oddsConfig: state.matches[def.id].odds,
           profileOdds: {
+            standard: betting.baseOdds(def, { profile: 'standard' }),
             even: betting.baseOdds(def, { profile: 'even' }),
             [`fav:${def.fighterA}`]: betting.baseOdds(def, { profile: 'favorite', favorite: def.fighterA }),
             [`fav:${def.fighterB}`]: betting.baseOdds(def, { profile: 'favorite', favorite: def.fighterB }),

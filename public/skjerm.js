@@ -47,7 +47,7 @@
       <div class="skjerm-tally">
         ${row(a)}
         ${row(b)}
-        <p class="skjerm-tally-total">Pengene i salen · ${formatKr(match.backing.totalStakeOre)} satset på ${match.backing.betCount} bonger</p>
+        <p class="skjerm-tally-total">Pengene i salen · ${formatKr(match.backing.totalStakeOre)} satset på ${match.backing.betCount} ${match.backing.betCount === 1 ? 'bong' : 'bonger'}</p>
       </div>
     `;
   }
@@ -134,11 +134,6 @@
         <img src="${result.winner.photo}" alt="${esc(result.winner.name)}" />
       </div>
       <p class="skjerm-winner-name" style="color:${result.winner.color}">${esc(result.winner.name)}</p>
-      <div class="skjerm-rounds">
-        ${result.rounds.map((r) => `
-          <span class="skjerm-round" style="border-color:${r.winner.color}">Runde ${r.round}: ${esc(r.winner.name.split(' ')[0])}</span>
-        `).join('')}
-      </div>
       ${renderTally(match)}
     `;
   }

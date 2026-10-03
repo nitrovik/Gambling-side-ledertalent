@@ -9,8 +9,8 @@ En "gambling"-side til Ledertalent-presentasjonen. Publikum registrerer navnet s
 
 Du (presentasjonsholderen) styrer kvelden fra en egen admin-side, publikum spiller fra mobilen sin, og en storskjerm-visning projiseres i rommet for den store, felles avsløringen.
 
-- **Publikumsside** (`/`) — registrering, lommebok, odds, spillebong, "Mine bonger" og toppliste. Under "Spill" velger man kamp, og hvert marked (kampvinner, runde 1–3, vinnermetode) er en meny man trykker frem. Bongen dukker opp nederst på skjermen ved første valg, kan minimeres, og viser odds, innsats, saldo etter bong og mulig gevinst. Når en kamp avgjøres, spretter det opp en annonsering med vinneren, hvordan det gikk med bongene dine og ny saldo, pluss konfetti.
-- **Storskjerm** (`/skjerm.html`) — en ren visningsside uten registrering, laget for å projiseres. Viser hvor pengene i salen ligger, hvilken runde som pågår, vinner-avsløringer med rundevinnere og topplisten til slutt.
+- **Publikumsside** (`/`) — registrering, lommebok, odds, spillebong, "Mine bonger" og toppliste. Under "Spill" velger man kamp, og hvert marked (kampvinner og vinnermetode) er en meny man trykker frem. Bongen dukker opp nederst på skjermen ved første valg, kan minimeres, og viser odds, innsats, saldo etter bong og mulig gevinst. Når en kamp avgjøres, spretter det opp en annonsering med vinneren, hvordan det gikk med bongene dine og ny saldo, pluss konfetti.
+- **Storskjerm** (`/skjerm.html`) — en ren visningsside uten registrering, laget for å projiseres. Viser hvor pengene i salen ligger, hvilken runde som pågår, vinner-avsløringer og topplisten til slutt.
 - **Admin** (`/admin.html`) — styrer fasene, kampforløpet (runde for runde), odds og resultater.
 
 ## Kampoppsettet
@@ -28,28 +28,37 @@ Hver kamp går alltid alle 3 runder, og vinneren avgjøres i runde 3 (på KO, TK
 
 **Markeder per kamp**
 - Kampvinner
-- Rundevinner i runde 1, 2 og 3
 - Vinnermetode per fighter: KO, TKO eller poeng
 
-**Odds** — admin velger oddsprofil per kamp og kan overstyre enkeltodds:
+**Kveldens odds** (standard, satt i `MATCH_DEFS` i `server.js`):
+
+| Fighter | Vinner | Poeng | TKO | KO |
+|---|---|---|---|---|
+| Rita Relator | 3,75 | 7,50 | 12,50 | 19,00 |
+| Pål Producer | 1,87 | 3,75 | 6,25 | 9,50 |
+| Petra Processor | 1,75 | 3,50 | 5,85 | 8,90 |
+| Morten Motivator | 2,05 | 4,10 | 6,85 | 10,40 |
+
+Vinneroddsen er fordelt på metodene (ca. 50 % poeng, 30 % TKO, 20 % KO), så de henger sammen.
+
+I adminpanelet kan du bytte til en generell profil per kamp og overstyre enkeltodds:
 
 | Marked | Jevn kamp | Favoritt | Underdog |
 |---|---|---|---|
-| Kampvinner / rundevinner | 1,87 | 1,55 | 2,35 |
+| Kampvinner | 1,87 | 1,55 | 2,35 |
 | Vinner på poeng | 3,75 | 3,10 | 4,25 |
 | Vinner på TKO | 6,25 | 5,20 | 8,50 |
 | Vinner på KO | 9,50 | 7,80 | 13,00 |
 
 **Bonger**
 - Ett valg = singel (gevinst = innsats × odds). Flere valg = kombinasjon: oddsen ganges sammen, og alle valgene må treffe.
-- Alle markeder kan stackes på samme bong, for eksempel "Rita vinner kampen" + "Rita vinner på KO" + "Runde 1, 2 og 3: Rita", i begge kampene (maks 10 valg).
-- Bare valg som ikke kan skje samtidig blokkeres: begge fighterne i samme marked, kampvinner og vinnermetode for hver sin fighter, eller KO/TKO for én fighter og runde 3 til den andre (KO og TKO skjer alltid i runde 3).
+- Kampvinner og vinnermetode kan stackes på samme bong, for eksempel "Rita vinner kampen" + "Rita vinner på KO", i begge kampene.
+- Bare valg som ikke kan skje samtidig blokkeres: begge fighterne i samme marked, eller kampvinner og vinnermetode for hver sin fighter.
 - Oddsen låses på bongen når den leveres. Endrer admin oddsen etterpå, gjelder det bare nye bonger.
-- **Låsing:** kampvinner og vinnermetode stenger når runde 1 starter. Hvert rundemarked stenger når den runden starter. Når resultatet lagres, stenger hele kampen for godt. Å rette eller fjerne resultatet åpner den ikke igjen, siden alle har sett utfallet. Valg på en stengt kamp fjernes automatisk fra bongen på mobilen.
+- **Låsing:** spillet på en kamp stenger når runde 1 starter. Når resultatet lagres, stenger hele kampen for godt. Å rette eller fjerne resultatet åpner den ikke igjen, siden alle har sett utfallet. Valg på en stengt kamp fjernes automatisk fra bongen på mobilen.
 
 **Avgjøring**
-- Admin registrerer vinneren av runde 1, 2 og 3, kampvinner og metode. Bongene avgjøres automatisk.
-- Ved KO eller TKO må kampvinneren også ha vunnet runde 3. Adminskjemaet fyller det ut automatisk.
+- Admin registrerer kampvinner og metode (KO, TKO eller poeng). Bongene avgjøres automatisk.
 - Admin kan rette et feil resultat. Alle bonger avgjøres da på nytt, og ingen bong kan bli utbetalt to ganger. Hvis en deltaker allerede har brukt en gevinst som trekkes tilbake, går saldoen ikke under 0. Differansen trekkes fra neste gevinst i stedet.
 
 **Toppliste** — sortert på saldo, med avkastning i kr og %, antall bonger, treffprosent og største gevinst. Høyest saldo når leken avsluttes vinner.
@@ -86,8 +95,8 @@ Testene (Node sin innebygde test-runner, ingen ekstra avhengigheter) dekker odds
 **Under kvelden:**
 1. **Lobby** – publikum registrerer seg og kan allerede spille.
 2. **Kamp 1 i fokus** – storskjermen viser Rita vs. Pål og hvor pengene ligger.
-3. Trykk **Runde 1**, **Runde 2** og **Runde 3** under "Kampforløp" etter hvert som rundene starter. Det låser markedene.
-4. Når runde 3 er ferdig: fyll inn **Resultat** (vinner av hver runde, kampvinner og KO/TKO/poeng) og trykk "Lagre resultat og avgjør bonger". Bongene avgjøres, og storskjerm og mobiler viser avsløringen automatisk.
+3. Trykk **Runde 1** under "Kampforløp" når kampen starter. Da stenger spillet på kampen. **Runde 2** og **Runde 3** viser bare hvilken runde som pågår på storskjermen.
+4. Når runde 3 er ferdig: fyll inn **Resultat** (kampvinner og KO/TKO/poeng) og trykk "Lagre resultat og avgjør bonger". Bongene avgjøres, og storskjerm og mobiler viser avsløringen automatisk.
 5. Gjør det samme for **Kamp 2**.
 6. **Sluttresultat** – topplisten vises. Den med høyest saldo vinner.
 
